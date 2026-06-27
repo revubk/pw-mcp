@@ -1,0 +1,23 @@
+{
+  "name": "site-auditor-crawler",
+  "version": "1.0.0",
+  "description": "Automated Web Accessibility, SEO, and Core Functional Audit Crawler",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsc && node dist/index.js"
+  },
+  "dependencies": {
+    "@axe-core/playwright": "^4.9.1",
+    "axe-core": "^4.9.1",
+    "dotenv": "^16.4.5",
+    "inquirer": "^9.2.22",
+    "lighthouse": "^12.8.2",
+    "playwright": "^1.44.0"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^9.0.7",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3"
+  }
+}

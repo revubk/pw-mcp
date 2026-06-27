@@ -1,0 +1,13 @@
+[
+  {
+    "runId": "5FUSC",
+    "timestamp": "6/27/2026, 3:36:13 PM",
+    "targetUrl": "https://www.washington.edu/accesscomputing/AU/before.html",
+    "deviceMode": "desktop",
+    "totalScanned": 6,
+    "brokenCount": 0,
+    "a11yViolations": 50,
+    "avgSeoScore": 88,
+    "reportFilename": "report_5FUSC.html"
+  }
+]
