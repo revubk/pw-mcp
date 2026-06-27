@@ -51,6 +51,7 @@ export interface WizardAnswers {
   isHeadless: boolean;
   chosenDevice: 'desktop' | 'tablet' | 'mobile';
   pageCap: number;
+  runMcpAgent: boolean;
 }
 
 

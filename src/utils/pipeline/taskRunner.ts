@@ -2,9 +2,6 @@ import { Page } from 'playwright';
 import { runAccessibilityAudit } from '../../auditors/accessibility';
 import { runSeoAudit } from '../../auditors/seo';
 
-/**
- * Executes Axe-Core and programmatic Lighthouse audits concurrently to optimize pipeline speeds.
- */
 export async function executeParallelAudits(
   page: Page,
   url: string,

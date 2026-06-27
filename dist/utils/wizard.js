@@ -90,7 +90,13 @@ async function runTerminalWizard() {
                 { name: 'Accessibility Compliance (Axe-Core P2)', value: 'A11Y', checked: true },
                 { name: 'Technical SEO Metadata Checklist (Lighthouse Core P2)', value: 'SEO', checked: true }
             ]
-        }
+        },
+        {
+            type: 'confirm',
+            name: 'runMcpAgent',
+            message: '🤖 Enable autonomous Playwright MCP test scaffolding for every visited path node?',
+            default: true
+        },
     ]);
     const finalUrl = answers.urlSource === 'ENV' ? envUrl : answers.customUrl;
     const runA11y = answers.auditTiers.includes('A11Y');
@@ -110,6 +116,7 @@ async function runTerminalWizard() {
         runSeo,
         isHeadless,
         chosenDevice,
-        pageCap
+        pageCap,
+        runMcpAgent: answers.runMcpAgent
     };
 }

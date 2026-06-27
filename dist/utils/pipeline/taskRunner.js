@@ -3,9 +3,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.executeParallelAudits = executeParallelAudits;
 const accessibility_1 = require("../../auditors/accessibility");
 const seo_1 = require("../../auditors/seo");
-/**
- * Executes Axe-Core and programmatic Lighthouse audits concurrently to optimize pipeline speeds.
- */
 async function executeParallelAudits(page, url, scanA11y, scanSeo, deviceMode) {
     const tasks = [];
     if (scanA11y)

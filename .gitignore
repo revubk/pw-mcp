@@ -1,1 +1,17 @@
-node_modules
+# Local Environment Configuration Variable Secrets
+.env
+.env.local
+.env.*
+
+# macOS Operating System System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Compiled JavaScript Distribution Folders
+dist/
+node_modules/
+reports
+tests/*

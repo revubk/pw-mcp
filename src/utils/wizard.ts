@@ -1,14 +1,5 @@
 import inquirer from 'inquirer';
-import { DeviceFormFactor } from '../types/audit';
-
-export interface WizardAnswers {
-  finalUrl: string;
-  runA11y: boolean;
-  runSeo: boolean;
-  isHeadless: boolean;
-  chosenDevice: DeviceFormFactor;
-  pageCap: number;
-}
+import { DeviceFormFactor, WizardAnswers } from '../types/audit';
 
 /**
  * Core Interactive Selection Wizard Prompt.
@@ -96,7 +87,13 @@ export async function runTerminalWizard(): Promise<WizardAnswers> {
         { name: 'Accessibility Compliance (Axe-Core P2)', value: 'A11Y', checked: true },
         { name: 'Technical SEO Metadata Checklist (Lighthouse Core P2)', value: 'SEO', checked: true }
       ]
-    }
+    },
+    {
+      type: 'confirm',
+      name: 'runMcpAgent',
+      message: '🤖 Enable autonomous Playwright MCP test scaffolding for every visited path node?',
+      default: true
+    },
   ]);
 
   const finalUrl = answers.urlSource === 'ENV' ? envUrl : answers.customUrl;
@@ -118,6 +115,7 @@ export async function runTerminalWizard(): Promise<WizardAnswers> {
     runSeo,
     isHeadless,
     chosenDevice,
-    pageCap
+    pageCap,
+    runMcpAgent: answers.runMcpAgent 
   };
 }

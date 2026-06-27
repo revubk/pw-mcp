@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@axe-core/playwright": "^4.9.1",
+    "@playwright/mcp": "^0.0.76",
     "axe-core": "^4.9.1",
     "dotenv": "^16.4.5",
     "inquirer": "^9.2.22",
