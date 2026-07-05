@@ -53,48 +53,122 @@ export async function executeAutonomousMcpAgent(page: Page, url: string): Promis
     const schemaContextString = JSON.stringify(interactiveElementsSchema, null, 2);
     let generatedActionLines = '';
 
-    try {
-      console.log(`   🧠 [Local AI Active] Bundling Prompt Blueprint. Processing via Ollama...`);
-      
-      const response = await axios.post('http://localhost:11434/api/generate', {
-        model: 'deepseek-r1:1.5b',
-        prompt: `
+    const sharedPromptBody = `
 ${userCustomPromptAddon}
 
-Generate ONLY standalone, raw Playwright interaction code lines for these specific webpage components:
+Here is the live DOM schema extracted from ${url} (only these elements exist — do not invent others):
 ${schemaContextString}
+`.trim();
 
-CRITICAL RULES:
-1. Write ONLY native, single-line actions. Example:
-   await page.click('button');
-   await page.fill('input', 'test data');
-2. Do NOT write full test container functions, imports, or markdown blocks.
-3. Keep selectors simple using the element type or text values provided.
-`,
-        stream: false,
-        options: {
-          temperature: 0.1
-        }
-      }, { timeout: 45000 });
+    // Clean out markdown fences, stray prose, and reasoning tags; keep only
+    // lines that look like real Playwright statements or short comments.
+    const sanitizeModelOutput = (raw: string): string => {
+      let cleaned = raw.trim();
 
-      let rawOutput = response.data.response.trim();
-      
-      // Strict clean sweep filter: Strip away DeepSeek internal thinking logs
-      if (rawOutput.includes('</think>')) {
-        const structuralParts = rawOutput.split('</think>');
-        rawOutput = structuralParts[structuralParts.length - 1].trim();
+      if (cleaned.includes('</think>')) {
+        cleaned = cleaned.split('</think>').pop()!.trim();
       }
-      
-      // Clean out accidental markdown or commentary comments text artifacts
-      generatedActionLines = rawOutput
-        .replace(/\`\`\`typescript/gi, '')
-        .replace(/\`\`\`/g, '')
-        .split('\n')
-        .filter((line: string) => line.trim().startsWith('await ') || line.trim().startsWith('//'))
-        .join('\n    ');
 
-    } catch (ollamaErr) {
-      console.log(`   ⚠️  Local Ollama port unreachable. Compiling fallback templates.`);
+      cleaned = cleaned
+        .replace(/```typescript/gi, '')
+        .replace(/```ts/gi, '')
+        .replace(/```/g, '');
+
+      return cleaned
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.startsWith('await ') || line.startsWith('//'))
+        .join('\n    ');
+    };
+
+    const geminiApiKey = (process.env.GEMINI_API_KEY || '').trim();
+    const geminiModel = (process.env.GEMINI_MODEL || 'gemini-2.0-flash').trim();
+
+    if (geminiApiKey) {
+      try {
+        console.log(`   🧠 [Gemini Active] Generating interaction flow via ${geminiModel} (free tier)...`);
+
+        const response = await axios.post(
+          `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`,
+          {
+            contents: [{ parts: [{ text: sharedPromptBody }] }],
+            generationConfig: {
+              temperature: 0.1,
+              maxOutputTokens: 512
+            }
+          },
+          { timeout: 30000 }
+        );
+
+        const candidateText =
+          response.data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join('\n') || '';
+
+        generatedActionLines = sanitizeModelOutput(candidateText);
+
+        if (!generatedActionLines) {
+          console.log('   ⚠️  Gemini returned no usable action lines. Falling back.');
+        }
+      } catch (geminiErr: any) {
+        const status = geminiErr?.response?.status;
+        const reason = status === 429
+          ? 'free-tier rate limit hit'
+          : geminiErr?.response?.data?.error?.message || geminiErr.message;
+        console.log(`   ⚠️  Gemini call failed (${reason}). Falling back to local model.`);
+      }
+    }
+
+    // LM Studio serves an OpenAI-compatible /v1/chat/completions endpoint.
+    // Only attempted if LM_STUDIO_MODEL is set — otherwise skip straight to Ollama
+    // so nothing changes for people who haven't set up LM Studio.
+    const lmStudioModel = (process.env.LM_STUDIO_MODEL || '').trim();
+    const lmStudioBaseUrl = (process.env.LM_STUDIO_BASE_URL || 'http://localhost:1234/v1').trim();
+
+    if (!generatedActionLines && lmStudioModel) {
+      try {
+        console.log(`   🧠 [LM Studio Active] Generating interaction flow via ${lmStudioModel}...`);
+
+        const response = await axios.post(
+          `${lmStudioBaseUrl}/chat/completions`,
+          {
+            model: lmStudioModel,
+            messages: [{ role: 'user', content: sharedPromptBody }],
+            temperature: 0.1,
+            max_tokens: 512,
+            stream: false
+          },
+          { timeout: 45000 }
+        );
+
+        const candidateText = response.data?.choices?.[0]?.message?.content || '';
+        generatedActionLines = sanitizeModelOutput(candidateText);
+
+        if (!generatedActionLines) {
+          console.log('   ⚠️  LM Studio returned no usable action lines. Falling back.');
+        }
+      } catch (lmStudioErr: any) {
+        const reason = lmStudioErr?.response?.data?.error?.message || lmStudioErr.message;
+        console.log(`   ⚠️  LM Studio call failed (${reason}). Is the local server running? Falling back to Ollama.`);
+      }
+    }
+
+    if (!generatedActionLines) {
+      try {
+        console.log(`   🧠 [Local AI Active] Bundling Prompt Blueprint. Processing via Ollama...`);
+
+        const response = await axios.post('http://localhost:11434/api/generate', {
+          model: 'deepseek-r1:1.5b',
+          prompt: sharedPromptBody,
+          stream: false,
+          options: {
+            temperature: 0.1
+          }
+        }, { timeout: 45000 });
+
+        generatedActionLines = sanitizeModelOutput(response.data.response.trim());
+
+      } catch (ollamaErr) {
+        console.log(`   ⚠️  Local Ollama port unreachable. Compiling fallback templates.`);
+      }
     }
 
     const verifiedCompilationOutput = `import { test, expect } from '@playwright/test';

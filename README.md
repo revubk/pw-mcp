@@ -1,101 +1,132 @@
-# Automated Web Accessibility, SEO, and Core Functional Audit Crawler (Minor Project)
+# pw-mcp — Automated Accessibility, SEO, and Functional Audit Crawler
 
-An automated web crawler engine built to eliminate manual website regression testing bottlenecks. The application crawls full target web domains to catch high-priority structural bugs, track digital compliance metrics, and automatically deliver an instant deployment decision before software updates reach live users.
+Lightweight TypeScript crawler that scans a target website to detect critical functional failures, accessibility regressions (Axe), and basic SEO issues. Designed as a developer tool to generate site-wide audit reports and a deployable "Go/No-Go" decision signal.
 
-## 📌 Real-World Problem Statement
-In modern web development, websites change daily. Manual regression testing is slow, expensive, and prone to human oversight. Traditional QA teams spend hundreds of hours manually checking for broken links, verifying alternate image text labels for screen readers, and checking page layout metadata. This bottleneck delays software shipping schedules. 
+## Key Features
+- Site crawl with internal link discovery (BFS) and duplicate suppression
+- P1 functional checks: broken pages, HTTP errors, navigation failures
+- P2 compliance checks: automated Axe accessibility scans and SEO metadata validations
+- Report generation using templates in `src/reporter` and reusable UI components
+- Pluggable auditors in `src/auditors` for extensibility
 
-This project solves the issue by deploying a fast, automated browser engine that completely maps a website's layout within minutes. It automatically categorizes errors into clear priority tiers and outputs a mathematical "Go/No-Go" gate verdict, enabling teams to catch defects immediately and release software updates with confidence.
-
----
-
-## 🛠️ Automated Testing Architecture
-
-The system splits testing parameters into two distinct operational tiers to guide business rollout decisions:
-
-### 🔴 Priority 1 (P1): Critical Functional Health
-* **Broken Page Tracing**: Intercepts active network paths to catch `404 Not Found` or `500 Server Error` browser failures.
-* **Navigation Failures**: Logs application structural routing loops or page crashes.
-
-### 🟡 Priority 2 (P2): Compliance & Discoverability
-* **Accessibility Inspections (Axe-Core)**: Programmatically scans the DOM tree to locate digital accessibility barriers (WCAG rules compliance) impacting users with visual or physical impairments.
-* **Technical SEO Audits (Lighthouse Core Rules)**: Validates document headers, viewport responsiveness patterns, and presence of essential page metadata descriptions for search engines.
-
----
-
-## 🧩 Tech Stack
-* **Language Runtime**: TypeScript (Node.js ecosystem)
-* **Automation Driver**: Playwright (Headless multi-browser simulation)
-* **Compliance Rules Engine**: `@axe-core/playwright`
-* **Development IDE**: Visual Studio Code
-
----
-
-## 📂 Project Structure
-```text
-site-auditor-crawler/
+## Project layout
+```
+pw-mcp/
 ├── src/
-│   ├── crawler/
-│   │   └── crawler.ts       # Crawling engine & internal link BFS explorer
-│   ├── auditors/
-│   │   ├── accessibility.ts # Automated Axe-core accessibility scanners
-│   │   └── seo.ts           # Page layout metadata verification modules
-│   └── index.ts             # Orchestration logic & Go/No-Go threshold analyzer
-├── package.json             # Dependencies configuration files
-├── tsconfig.json            # TypeScript build rules definition
-└── README.md                # Project documentation manual
+│   ├── auditors/        # accessibility, seo, visual auditors
+│   ├── crawler/         # crawl engine and link discovery
+│   ├── reporter/        # report templates and components
+│   ├── types/           # shared types and interfaces
+│   └── utils/           # orchestrator, wizard, pipeline helpers
+├── tests/               # sample projects / integration test pages
+├── package.json
+├── tsconfig.json
+└── README.md
 ```
 
----
+## Tech stack
+- TypeScript (Node 18+)
+- Playwright for browser automation
+- @axe-core/playwright for accessibility checks
 
-## 🚀 Getting Started & Local Demo Setup
-
-### Prerequisites
-Make sure you have [Node.js](https://nodejs.org) (v18 or higher) installed on your computer.
-
-### 1. Clone & Install Dependencies
-Navigate into your project folder and run the installation script:
+## Quickstart
+1. Install dependencies:
 ```bash
 npm install
 ```
-
-### 2. Install Playwright Browsers
-Download the optimized local browser engine binaries required for headless execution:
+2. Install Playwright browsers (Chromium recommended):
 ```bash
 npx playwright install chromium
 ```
-
-### 3. Run the Automated Suite
-Compile the TypeScript code and execute the live crawler scanner against your target test page:
+3. (Optional) Set a default target URL via env var:
+```bash
+export TARGET_URL="https://example.com"
+```
+4. Run the crawler (example):
 ```bash
 npm start
 ```
 
+The CLI will guide you through a small wizard (target URL source, headless/headed, device emulation, page cap, and which audit tiers to run).
+
+### Output locations
+After a run completes, HTML reports are written under:
+- `reports/<target-host>/index.html` (dashboard history)
+- `reports/<target-host>/report_<RUN_ID>.html` (per-run details)
+- `reports/<target-host>/history_database.json` (run history)
+
+## Configuration notes
+- `TARGET_URL` is read by `src/utils/wizard.ts` as the default when choosing “Use default from .env file”.
+- Page cap is controlled by the wizard (“Standard Limit (Max 15 Pages)”, “Scan All”, or a custom number).
+
+Check `package.json` for available scripts.
+
+## AI-generated Playwright test flows (MCP + Gemini)
+`src/utils/pipeline/mcpClient.ts` uses Microsoft's Playwright MCP server to extract the interactive
+DOM schema of each crawled page, then sends that schema (plus the instructions in
+`mcp_prompt_blueprint.txt`) to an LLM to generate a short, realistic interaction sequence
+(fill/click/assert) that gets spliced into an auto-generated `*.spec.ts` file under `tests/<host>/`.
+
+**Model priority:**
+1. **Gemini (free tier)** — used automatically if `GEMINI_API_KEY` is set.
+2. **LM Studio** (local, OpenAI-compatible server) — used if `LM_STUDIO_MODEL` is set and Gemini
+   isn't configured (or its call fails).
+3. **Local Ollama** (`deepseek-r1:1.5b` on `http://localhost:11434`) — final local fallback if
+   neither of the above is set up or reachable.
+4. **Static fallback template** — used if no AI backend produces usable output.
+
+### Setup — Gemini
+1. Get a free Gemini API key from Google AI Studio (aistudio.google.com/apikey).
+2. Add it to your `.env` file (create one at the repo root if it doesn't exist):
+   ```bash
+   GEMINI_API_KEY="your-key-here"
+   # Optional — defaults to gemini-2.0-flash, which is on the free tier
+   GEMINI_MODEL="gemini-2.0-flash"
+   ```
+3. Run the crawler as usual (`npm start`). You'll see `🧠 [Gemini Active]` in the logs when it's
+   being used, or a fallback notice if the key is missing/rate-limited.
+
+### Setup — LM Studio (e.g. running a Gemma model locally)
+1. In LM Studio, download a Gemma model (e.g. `gemma-2-9b-it` or a smaller quantized variant) and
+   load it.
+2. Go to the **Local Server** tab (the `<->` icon) and click **Start Server**. Note the exact model
+   identifier shown there — that's what you'll set below, and it must match exactly.
+3. Add to your `.env`:
+   ```bash
+   LM_STUDIO_MODEL="gemma-2-9b-it"   # use the exact identifier LM Studio shows
+   LM_STUDIO_BASE_URL="http://localhost:1234/v1"   # default LM Studio port; change if you customized it
+   ```
+4. Leave `GEMINI_API_KEY` unset (or blank) so the code falls through to LM Studio. If both are set,
+   Gemini wins — LM Studio only activates when Gemini isn't configured or its call fails.
+5. Run `npm start`. You'll see `🧠 [LM Studio Active]` in the logs when it's being used.
+
+**Notes on quality:** Gemma models (especially smaller/quantized ones under ~9B) are noticeably
+weaker at strictly following the "output only these Playwright lines, nothing else" instruction than
+Gemini or larger cloud models. The code's sanitizer strips markdown fences and prose, but if you see
+empty or malformed generations, try a larger Gemma variant, lower the temperature further, or check
+LM Studio's console to confirm the server actually received the request (a firewall or wrong port is
+the most common failure mode — you'll see a "call failed" log line with the reason if so).
+
+### Tuning accuracy
+The actual generation rules live in `mcp_prompt_blueprint.txt` at the repo root — edit that file to
+change how the model selects selectors, orders interactions, or how many statements it emits. It's
+loaded fresh on every run, so no rebuild is needed. Keep in mind the model only ever receives the
+top 10 interactive elements (`a, button, input, select`) found in the viewport, so if a flow isn't
+being generated correctly, check whether the target element is actually in that captured schema
+first.
+
+**Free-tier limits:** Gemini's free tier is rate-limited per minute and per day (check Google's
+current published limits). If you're crawling many pages quickly, expect occasional `429` fallbacks
+to Ollama — this is handled automatically and won't fail the crawl.
+
+
+## Contributing
+- Add new auditors under `src/auditors` and register them with the orchestrator in `src/index.ts`.
+- Keep reports and UI components in `src/reporter` for consistent output.
+
+## Notes
+- This repo is intended as a developer-facing tool for CI / pre-release checks. Integrate results into CI pipelines or extend output formats as needed.
+
 ---
 
-## 📊 Sample Dashboard Output Matrix
-When run, the tool outputs real-time monitoring statistics directly to your execution console:
-
-```text
-🚀 Starting Automated Site Audit for: https://example.com
-
-🔎 Auditing: https://example.com
-🔎 Auditing: https://example.comabout
-🔎 Auditing: https://example.comservices/pricing
-
-======================================
-       FINAL RELEASE AUDIT REPORT      
-======================================
-• Total Pages Scanned  : 14
-• Broken Pages (P1)   : 0
-• Accessibility Bugs  : 3
-
-✅ STATUS: GO. Website meets core stability requirements.
-```
-
----
-
-## 🎓 Academic Learning Outcomes
-* **Advanced Web Scraping Mechanics**: Implementing non-cyclic graph travel logic (Breadth-First Search) inside dynamic page runtimes.
-* **Modern Web Standards Execution**: Translating standard WCAG laws into clear programmatic validation scripts.
-* **Quality Assurance Gate Design**: Building data-driven conditional execution scripts that map test outcomes directly to corporate deployment workflows.
+File: `README.md` — updated to reflect repository purpose and structure.
