@@ -6,25 +6,32 @@ import { compileSeoDrawerHtml } from './components/seoDrawer';
 export { renderHistoryRowTemplate } from './components/historyRow';
 
 export function renderPageBlockTemplate(p: PageAuditResult): string {
-  const pageScore = typeof p.seoScore === 'number' ? p.seoScore : 100;
-  const pageHashId = p.url.replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 30);
+    const pageScore = typeof p.seoScore === 'number' ? p.seoScore : 100;
+    const pageHashId = p.url.replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 30);
 
-  const drawerFunctional = compileFunctionalDrawerHtml(p);
+    const drawerFunctional = compileFunctionalDrawerHtml(p);
 
-  let a11yAccordionWrapper = '';
-  const wasA11yRun = p.a11yDetails !== undefined && Array.isArray(p.a11yDetails);
-  
-  if (wasA11yRun) {
-    const drawerAccessibility = compileAccessibilityDrawerHtml(p.a11yDetails);
-    
-    const screenshotButtonHeader = p.screenshotPath ? `
+    let a11yAccordionWrapper = '';
+    const wasA11yRun = p.a11yDetails !== undefined && Array.isArray(p.a11yDetails);
+
+    if (wasA11yRun) {
+        const drawerAccessibility = compileAccessibilityDrawerHtml(p.a11yDetails);
+
+        const visualAiButtonHeader = p.visualAiUrl ? `
+    <div style="margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px dashed #cbd5e1;">
+       <a href="${p.visualAiUrl}" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; background: #2563eb; color: #ffffff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 700; border: 1px solid #2563eb; transition: background 0.15s; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">
+          👁️ View Cloud Visual AI Regression & Diff Baseline Evidence (Applitools Dashboard)
+       </a>
+    </div>` : '';
+
+        const screenshotButtonHeader = p.screenshotPath ? `
       <div style="margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px dashed #e2e8f0;">
          <a href="${p.screenshotPath}" target="_blank" style="display: inline-flex; background: #0f172a; color: #ffffff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; border: 1px solid #0f172a; transition: background 0.15s;">
             📸 View Full Page Visual Evidence Link (All Violations Outlined)
          </a>
       </div>` : '';
 
-    a11yAccordionWrapper = `
+        a11yAccordionWrapper = `
       <details style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.01);" id="a11y_${pageHashId}">
           <summary style="padding: 14px 18px; font-size: 13px; font-weight: 700; color: #1e293b; cursor: pointer; display: flex !important; align-items: center; gap: 8px; border-radius: 6px; background: #f1f5f9; list-style: none;">
              <span class="sub-arrow">▶</span> Accessibility Compliance Trace (Axe-Core Breakdown)
@@ -32,42 +39,41 @@ export function renderPageBlockTemplate(p: PageAuditResult): string {
           <div style="padding: 18px; background: #fafafa; border-top: 1px solid #e2e8f0; box-sizing: border-box; width: 100%;">
               ${screenshotButtonHeader}
               ${drawerAccessibility}
+              ${visualAiButtonHeader}
           </div>
       </details>`;
-  }
+    }
 
-  let seoAccordionWrapper = '';
-  const wasSeoRun = p.seoDetails !== undefined && p.seoPassDetails !== undefined;
-  
-  if (wasSeoRun) {
-    const isDisabledNotice = p.seoDetails.length === 1 && p.seoDetails.includes('disabled for this run segment');
-    
-    if (!isDisabledNotice) {
-      const drawerSeo = compileSeoDrawerHtml(p.seoDetails, p.seoPassDetails);
-      seoAccordionWrapper = `
+    let seoAccordionWrapper = '';
+    const wasSeoRun = p.seoDetails !== undefined && p.seoPassDetails !== undefined;
+
+    if (wasSeoRun) {
+        const isDisabledNotice = p.seoDetails.length === 1 && p.seoDetails.includes('disabled for this run segment');
+
+        if (!isDisabledNotice) {
+            const drawerSeo = compileSeoDrawerHtml(p.seoDetails, p.seoPassDetails);
+            seoAccordionWrapper = `
         <details style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.01);" id="seo_${pageHashId}">
             <summary style="padding: 14px 18px; font-size: 13px; font-weight: 700; color: #1e293b; cursor: pointer; display: flex !important; align-items: center; gap: 8px; border-radius: 6px; background: #f1f5f9; list-style: none;">
                <span class="sub-arrow">▶</span> Programmatic Lighthouse SEO Audit Verification Records
             </summary>
             <div style="padding: 18px; background: #fafafa; border-top: 1px solid #e2e8f0;">${drawerSeo}</div>
         </details>`;
+        }
     }
-  }
 
-  const statusPill = `<span style="padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-block; white-space: nowrap;" onclick="document.getElementById('${pageHashId}').setAttribute('open','true'); document.getElementById('func_${pageHashId}').setAttribute('open','true');">Functional Details</span>`;
-  const a11yPill = wasA11yRun 
-    ? `<span style="padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-block; white-space: nowrap; ${p.a11yErrors > 0 ? 'background: #fff5f5; color: #e53e3e; border: 1px solid #fed7d7;' : 'background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;'}" onclick="document.getElementById('${pageHashId}').setAttribute('open','true'); document.getElementById('a11y_${pageHashId}').setAttribute('open','true');">A11y: ${p.a11yErrors} Issues</span>`
-    : `<span style="padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; background: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; display: inline-block; white-space: nowrap; cursor: not-allowed;">A11y: Skipped</span>`;
-  const seoPill = wasSeoRun && !(p.seoDetails.length === 1 && p.seoDetails.includes('disabled for this run segment'))
-    ? `<span style="padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-block; white-space: nowrap; ${pageScore < 100 ? 'background: #fffbeb; color: #d97706; border: 1px solid #fef3c7;' : 'background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;'}" onclick="document.getElementById('${pageHashId}').setAttribute('open','true'); document.getElementById('seo_${pageHashId}').setAttribute('open','true');">SEO: ${pageScore}/100</span>`
-    : `<span style="padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; background: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; display: inline-block; white-space: nowrap; cursor: not-allowed;">SEO: Skipped</span>`;
+    const statusPill = `<span style="padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-block; white-space: nowrap;" onclick="document.getElementById('${pageHashId}').setAttribute('open','true'); document.getElementById('func_${pageHashId}').setAttribute('open','true');">Functional Details</span>`;
+    const a11yPill = wasA11yRun
+        ? `<span style="padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-block; white-space: nowrap; ${p.a11yErrors > 0 ? 'background: #fff5f5; color: #e53e3e; border: 1px solid #fed7d7;' : 'background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;'}" onclick="document.getElementById('${pageHashId}').setAttribute('open','true'); document.getElementById('a11y_${pageHashId}').setAttribute('open','true');">A11y: ${p.a11yErrors} Issues</span>`
+        : `<span style="padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; background: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; display: inline-block; white-space: nowrap; cursor: not-allowed;">A11y: Skipped</span>`;
+    const seoPill = wasSeoRun && !(p.seoDetails.length === 1 && p.seoDetails.includes('disabled for this run segment'))
+        ? `<span style="padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-block; white-space: nowrap; ${pageScore < 100 ? 'background: #fffbeb; color: #d97706; border: 1px solid #fef3c7;' : 'background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;'}" onclick="document.getElementById('${pageHashId}').setAttribute('open','true'); document.getElementById('seo_${pageHashId}').setAttribute('open','true');">SEO: ${pageScore}/100</span>`
+        : `<span style="padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; background: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; display: inline-block; white-space: nowrap; cursor: not-allowed;">SEO: Skipped</span>`;
 
-  return `
+    return `
     <details style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); overflow: hidden; width: 100%; display: block;" class="page-accordion" id="${pageHashId}">
-        <!-- 🔥 FIX: Force layout behavior explicitly onto summary via grid rules with a 100% block layout box -->
         <summary style="display: block !important; padding: 0; cursor: pointer; user-select: none; background: #ffffff; list-style: none; width: 100%; box-sizing: border-box;">
             
-            <!-- 🔥 FIX: Isolated layout alignment container prevents expansion-based resizing distortion entirely -->
             <div style="display: grid; grid-template-columns: 68% 32%; align-items: center; padding: 18px 24px; width: 100%; box-sizing: border-box;">
                 
                 <!-- Left grid pane: Enforces explicit boundary restrictions for long session token paths -->

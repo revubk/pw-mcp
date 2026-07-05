@@ -17,6 +17,7 @@ export interface PageAuditResult {
   a11yDetails: A11yErrorDetail[];
   seoDetails: string[];
   seoPassDetails: string[]; 
+  visualAiUrl? :string
 }
 
 export interface RunHistoryRecord {
@@ -48,6 +49,7 @@ export interface WizardAnswers {
   finalUrl: string;
   runA11y: boolean;
   runSeo: boolean;
+  runVisual: boolean; 
   isHeadless: boolean;
   chosenDevice: 'desktop' | 'tablet' | 'mobile';
   pageCap: number;

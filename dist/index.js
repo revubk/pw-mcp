@@ -40,7 +40,7 @@ dotenv.config();
 async function bootstrapApplication() {
     try {
         const config = await (0, wizard_1.runTerminalWizard)();
-        await (0, orchestrator_1.executeSiteAudit)(config.finalUrl, config.runA11y, config.runSeo, config.isHeadless, config.chosenDevice, config.pageCap, config.runMcpAgent // 🔥 Linked preference directly to your core loop process thread
+        await (0, orchestrator_1.executeSiteAudit)(config.finalUrl, config.runA11y, config.runSeo, config.runVisual, config.isHeadless, config.chosenDevice, config.pageCap, config.runMcpAgent // 🔥 Linked preference directly to your core loop process thread
         );
     }
     catch (error) {

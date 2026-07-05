@@ -28,11 +28,11 @@ export async function runTerminalWizard(): Promise<WizardAnswers> {
       message: 'Enter the full website URL:',
       when: (hash) => hash.urlSource === 'MANUAL',
       validate: (input) => {
-        try { 
-          new URL(input); 
-          return true; 
-        } catch (_) { 
-          return 'Please enter a valid absolute URL string (starting with http:// or https://).'; 
+        try {
+          new URL(input);
+          return true;
+        } catch (_) {
+          return 'Please enter a valid absolute URL string (starting with http:// or https://).';
         }
       }
     },
@@ -78,6 +78,7 @@ export async function runTerminalWizard(): Promise<WizardAnswers> {
         return true;
       }
     },
+    // Look for the auditTiers block inside your src/utils/wizard.ts file and modify it exactly like this:
     {
       type: 'checkbox',
       name: 'auditTiers',
@@ -85,7 +86,8 @@ export async function runTerminalWizard(): Promise<WizardAnswers> {
       choices: [
         { name: 'Functional Checks (P1 Broken Links/Crashes)', value: 'FUNC', disabled: 'Always Enabled' },
         { name: 'Accessibility Compliance (Axe-Core P2)', value: 'A11Y', checked: true },
-        { name: 'Technical SEO Metadata Checklist (Lighthouse Core P2)', value: 'SEO', checked: true }
+        { name: 'Technical SEO Metadata Checklist (Lighthouse Core P2)', value: 'SEO', checked: true },
+        { name: 'Visual AI Layout Verification Tiers (Applitools P2)', value: 'VISUAL', checked: true } // 🔥 NEW OPTION ROW
       ]
     },
     {
@@ -99,12 +101,13 @@ export async function runTerminalWizard(): Promise<WizardAnswers> {
   const finalUrl = answers.urlSource === 'ENV' ? envUrl : answers.customUrl;
   const runA11y = answers.auditTiers.includes('A11Y');
   const runSeo = answers.auditTiers.includes('SEO');
+  const runVisual = answers.auditTiers.includes('VISUAL');
   const isHeadless = answers.browserMode;
   const chosenDevice = answers.deviceFormFactor as DeviceFormFactor;
 
   let pageCap = 15;
   if (answers.capProfile === 'ALL') {
-    pageCap = 99999; 
+    pageCap = 99999;
   } else if (answers.capProfile === 'CUSTOM') {
     pageCap = parseInt(answers.customCapNumber, 10);
   }
@@ -113,9 +116,10 @@ export async function runTerminalWizard(): Promise<WizardAnswers> {
     finalUrl,
     runA11y,
     runSeo,
+    runVisual,
     isHeadless,
     chosenDevice,
     pageCap,
-    runMcpAgent: answers.runMcpAgent 
+    runMcpAgent: answers.runMcpAgent
   };
 }

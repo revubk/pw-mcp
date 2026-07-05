@@ -1,0 +1,27 @@
+================================================================================
+AUTONOMOUS EXPERT CORE QA SCRIPT RULES - CONTEXT TIER 7
+================================================================================
+
+1. CODE FORMAT REQUIREMENTS:
+   - Output ONLY raw, executable, pure TypeScript code block lines.
+   - Do NOT wrap the code inside markdown ticks (```typescript) or explain steps.
+   - Strip out any <think>...</think> reasoning chains entirely from the response.
+
+2. PLAYWRIGHT FLOW CONSTRAINTS:
+   - Always import { test, expect } from '@playwright/test'.
+   - Initialize the run with 'await page.goto(URL, { waitUntil: "networkidle" });'.
+   - Analyze the provided page elements layout schema. Identify high-value inputs 
+     (like search forms, query fields, buttons, or nav anchors).
+   - Write an explicit, realistic user workflow sequence. If input boxes exist, 
+     use 'await page.fill()' or 'await page.type()', then fire click events.
+   - Add explicit functional visibility check assertions using 'expect(locator).toBeVisible()'.
+
+3. APPLITOOLS EYES VISUAL AI GATES INTEGRATION:
+   - If the schema contains visual content, mock or structure an Applitools checkpoint:
+     // await eyes.open(page, 'App Name', 'Page View Target Title');
+     // await eyes.check(Target.window().fully());
+     // await eyes.close();
+
+4. CI/CD WORKFLOW RUNNER COMPLIANCE:
+   - Ensure the generated script contains no external unmapped runtime dependencies.
+   - Tests must run independently inside a standard GitHub Actions Linux runner container environment.

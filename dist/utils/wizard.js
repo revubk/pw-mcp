@@ -81,6 +81,7 @@ async function runTerminalWizard() {
                 return true;
             }
         },
+        // Look for the auditTiers block inside your src/utils/wizard.ts file and modify it exactly like this:
         {
             type: 'checkbox',
             name: 'auditTiers',
@@ -88,7 +89,8 @@ async function runTerminalWizard() {
             choices: [
                 { name: 'Functional Checks (P1 Broken Links/Crashes)', value: 'FUNC', disabled: 'Always Enabled' },
                 { name: 'Accessibility Compliance (Axe-Core P2)', value: 'A11Y', checked: true },
-                { name: 'Technical SEO Metadata Checklist (Lighthouse Core P2)', value: 'SEO', checked: true }
+                { name: 'Technical SEO Metadata Checklist (Lighthouse Core P2)', value: 'SEO', checked: true },
+                { name: 'Visual AI Layout Verification Tiers (Applitools P2)', value: 'VISUAL', checked: true } // 🔥 NEW OPTION ROW
             ]
         },
         {
@@ -101,6 +103,7 @@ async function runTerminalWizard() {
     const finalUrl = answers.urlSource === 'ENV' ? envUrl : answers.customUrl;
     const runA11y = answers.auditTiers.includes('A11Y');
     const runSeo = answers.auditTiers.includes('SEO');
+    const runVisual = answers.auditTiers.includes('VISUAL');
     const isHeadless = answers.browserMode;
     const chosenDevice = answers.deviceFormFactor;
     let pageCap = 15;
@@ -114,6 +117,7 @@ async function runTerminalWizard() {
         finalUrl,
         runA11y,
         runSeo,
+        runVisual,
         isHeadless,
         chosenDevice,
         pageCap,

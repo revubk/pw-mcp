@@ -7,11 +7,12 @@ dotenv.config();
 async function bootstrapApplication(): Promise<void> {
   try {
     const config = await runTerminalWizard();
-    
+
     await executeSiteAudit(
       config.finalUrl,
       config.runA11y,
       config.runSeo,
+      config.runVisual,
       config.isHeadless,
       config.chosenDevice,
       config.pageCap,

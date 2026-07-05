@@ -40,12 +40,9 @@ const taskRunner_1 = require("./pipeline/taskRunner");
 const dataBackfill_1 = require("./pipeline/dataBackfill");
 const canvasInject_1 = require("./pipeline/canvasInject");
 const mcpClient_1 = require("./pipeline/mcpClient");
+const visual_1 = require("../auditors/visual");
 const path = __importStar(require("path"));
-/**
- * Main Central Orchestrator.
- * Routes traffic to isolated single-responsibility pipeline modules.
- */
-async function executeSiteAudit(targetSite, scanA11y, scanSeo, headless, deviceMode, pageCapValue, runMcpAgent) {
+async function executeSiteAudit(targetSite, scanA11y, scanSeo, scanVisual, headless, deviceMode, pageCapValue, runMcpAgent) {
     const runId = Math.random().toString(36).substring(2, 7).toUpperCase();
     const hostName = new URL(targetSite).hostname.replace(/[^a-z0-9]/gi, '_');
     console.log('\n========================================================================');
@@ -75,7 +72,7 @@ async function executeSiteAudit(targetSite, scanA11y, scanSeo, headless, deviceM
             let pageSeoPassDetails = [];
             let screenshotPath = undefined;
             if (statusCode < 400) {
-                // 1. Invoke Decoupled Parallel Task Auditor Component
+                // 1. Fire Decoupled Parallel Task Auditor Component
                 const audits = await (0, taskRunner_1.executeParallelAudits)(page, url, scanA11y, scanSeo, deviceMode);
                 a11yErrorsOnPage = audits.a11yErrorsOnPage;
                 pageA11yDetails = audits.pageA11yDetails;
@@ -83,16 +80,34 @@ async function executeSiteAudit(targetSite, scanA11y, scanSeo, headless, deviceM
                 pageSeoDetails = audits.pageSeoDetails;
                 pageSeoPassDetails = audits.pageSeoPassDetails;
                 aggregateA11yIssues += a11yErrorsOnPage;
-                // 2. Invoke Decoupled Background Playwright MCP Automation Channel Component
                 if (runMcpAgent) {
                     console.log(`🤖 [MCP AGENT] Spawning background automation script compiler for: ${url}`);
-                    const activeScriptFile = await (0, mcpClient_1.executeAutonomousMcpAgent)(url);
+                    const activeScriptFile = await (0, mcpClient_1.executeAutonomousMcpAgent)(page, url);
                     console.log(`   💾 Automated test compiled and saved cleanly to: ${activeScriptFile}`);
                 }
-                // 3. Invoke Decoupled Canvas Color Tagging Component
+                if (scanVisual) {
+                    await (0, visual_1.runVisualAiAudit)(page, url, runId);
+                }
+                let applitoolsResultUrl = undefined;
+                if (scanVisual) {
+                    applitoolsResultUrl = await (0, visual_1.runVisualAiAudit)(page, url, runId);
+                }
+                structuredPagesList.push({
+                    url,
+                    status: statusCode,
+                    a11yErrors: a11yErrorsOnPage,
+                    seoScore: seoScoreOnPage,
+                    a11yDetails: pageA11yDetails,
+                    seoDetails: pageSeoDetails,
+                    seoPassDetails: pageSeoPassDetails,
+                    screenshotPath,
+                    visualAiUrl: applitoolsResultUrl
+                });
+                await (0, visual_1.runVisualAiAudit)(page, url, runId);
+                // 4. Fire Decoupled Canvas Color Tagging Component
                 if (scanA11y && a11yErrorsOnPage > 0) {
                     await (0, canvasInject_1.injectVisualColorsChart)(page, pageA11yDetails);
-                    await page.waitForTimeout(1000); // Stable paint layout grace period pause
+                    await page.waitForTimeout(1000);
                     const fileSafeName = url.replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 40);
                     const imgFilename = `screenshots/map_${runId}_${fileSafeName}.png`;
                     const fullImgPath = path.join(process.cwd(), 'reports', hostName, imgFilename);
@@ -128,8 +143,9 @@ async function executeSiteAudit(targetSite, scanA11y, scanSeo, headless, deviceM
     }
     finally {
         process.off('SIGINT', handleInterrupt);
+        // 🔥 5. CLOSE STANDALONE POOL: Transmit all remaining visual AI data safely to the cloud
+        await (0, visual_1.closeVisualAiAuditorPool)();
     }
-    // 4. Invoke Decoupled Fault-Tolerant State Recovery Component
     (0, dataBackfill_1.backfillIncompletePages)(executionSummary, structuredPagesList, wasInterrupted);
     const detailedPayload = {
         runId,

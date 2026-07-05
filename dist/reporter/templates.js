@@ -15,6 +15,12 @@ function renderPageBlockTemplate(p) {
     const wasA11yRun = p.a11yDetails !== undefined && Array.isArray(p.a11yDetails);
     if (wasA11yRun) {
         const drawerAccessibility = (0, a11yDrawer_1.compileAccessibilityDrawerHtml)(p.a11yDetails);
+        const visualAiButtonHeader = p.visualAiUrl ? `
+    <div style="margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px dashed #cbd5e1;">
+       <a href="${p.visualAiUrl}" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; background: #2563eb; color: #ffffff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 700; border: 1px solid #2563eb; transition: background 0.15s; box-shadow: 0 2px 4px rgba(37,99,235,0.2);">
+          👁️ View Cloud Visual AI Regression & Diff Baseline Evidence (Applitools Dashboard)
+       </a>
+    </div>` : '';
         const screenshotButtonHeader = p.screenshotPath ? `
       <div style="margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px dashed #e2e8f0;">
          <a href="${p.screenshotPath}" target="_blank" style="display: inline-flex; background: #0f172a; color: #ffffff; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; border: 1px solid #0f172a; transition: background 0.15s;">
@@ -29,6 +35,7 @@ function renderPageBlockTemplate(p) {
           <div style="padding: 18px; background: #fafafa; border-top: 1px solid #e2e8f0; box-sizing: border-box; width: 100%;">
               ${screenshotButtonHeader}
               ${drawerAccessibility}
+              ${visualAiButtonHeader}
           </div>
       </details>`;
     }
@@ -56,10 +63,8 @@ function renderPageBlockTemplate(p) {
         : `<span style="padding: 6px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; background: #f1f5f9; color: #94a3b8; border: 1px solid #e2e8f0; display: inline-block; white-space: nowrap; cursor: not-allowed;">SEO: Skipped</span>`;
     return `
     <details style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); overflow: hidden; width: 100%; display: block;" class="page-accordion" id="${pageHashId}">
-        <!-- 🔥 FIX: Force layout behavior explicitly onto summary via grid rules with a 100% block layout box -->
         <summary style="display: block !important; padding: 0; cursor: pointer; user-select: none; background: #ffffff; list-style: none; width: 100%; box-sizing: border-box;">
             
-            <!-- 🔥 FIX: Isolated layout alignment container prevents expansion-based resizing distortion entirely -->
             <div style="display: grid; grid-template-columns: 68% 32%; align-items: center; padding: 18px 24px; width: 100%; box-sizing: border-box;">
                 
                 <!-- Left grid pane: Enforces explicit boundary restrictions for long session token paths -->
