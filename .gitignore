@@ -16,3 +16,5 @@ node_modules/
 reports/
 tests/*
 test-results/
+playwright-report/
+baselines/

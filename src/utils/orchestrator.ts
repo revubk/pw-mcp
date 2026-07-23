@@ -5,7 +5,7 @@ import { executeParallelAudits } from './pipeline/taskRunner';
 import { backfillIncompletePages } from './pipeline/dataBackfill';
 import { injectVisualColorsChart } from './pipeline/canvasInject';
 import { executeAutonomousMcpAgent } from './pipeline/mcpClient';
-import { runVisualAiAudit, closeVisualAiAuditorPool } from '../auditors/visual';
+import { runVisualAudit } from '../auditors/visual';
 import * as path from 'path';
 
 export async function executeSiteAudit(
@@ -20,6 +20,7 @@ export async function executeSiteAudit(
 ): Promise<void> {
   const runId = Math.random().toString(36).substring(2, 7).toUpperCase();
   const hostName = new URL(targetSite).hostname.replace(/[^a-z0-9]/gi, '_');
+  const reportDir = path.join(process.cwd(), 'reports', hostName);
 
   console.log('\n========================================================================');
   console.log(`🚀 AUTOMATED AUDIT PIPELINE ENGINE INITIALIZED [RUN ID: ${runId}]`);
@@ -50,6 +51,7 @@ export async function executeSiteAudit(
       let pageSeoDetails: string[] = [];
       let pageSeoPassDetails: string[] = [];
       let screenshotPath: string | undefined = undefined;
+      let visualResults: any[] = []; // Store the new native Playwright visual metrics
 
       if (statusCode < 400) {
         // 1. Fire Decoupled Parallel Task Auditor Component
@@ -62,41 +64,26 @@ export async function executeSiteAudit(
         pageSeoPassDetails = audits.pageSeoPassDetails;
         aggregateA11yIssues += a11yErrorsOnPage;
 
+        // 2. Fire MCP Agent for Functional Test Generation
         if (runMcpAgent) {
           console.log(`🤖 [MCP AGENT] Spawning background automation script compiler for: ${url}`);
           const activeScriptFile = await executeAutonomousMcpAgent(page, url);
           console.log(`   💾 Automated test compiled and saved cleanly to: ${activeScriptFile}`);
         }
 
+        // 3. Fire Native Playwright Visual Diff Engine
         if (scanVisual) {
-          await runVisualAiAudit(page, url, runId);
-        }
-        let applitoolsResultUrl: string | undefined = undefined;
-        if (scanVisual) {
-          applitoolsResultUrl = await runVisualAiAudit(page, url, runId);
+          visualResults = await runVisualAudit(page, url, reportDir);
         }
 
-        structuredPagesList.push({
-          url,
-          status: statusCode,
-          a11yErrors: a11yErrorsOnPage,
-          seoScore: seoScoreOnPage,
-          a11yDetails: pageA11yDetails,
-          seoDetails: pageSeoDetails,
-          seoPassDetails: pageSeoPassDetails,
-          screenshotPath,
-          visualAiUrl: applitoolsResultUrl
-        });
-                await runVisualAiAudit(page, url, runId);
-
-        // 4. Fire Decoupled Canvas Color Tagging Component
+        // 4. Fire Decoupled Canvas Color Tagging Component (For A11y UI Maps)
         if (scanA11y && a11yErrorsOnPage > 0) {
           await injectVisualColorsChart(page, pageA11yDetails);
           await page.waitForTimeout(1000);
 
           const fileSafeName = url.replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 40);
           const imgFilename = `screenshots/map_${runId}_${fileSafeName}.png`;
-          const fullImgPath = path.join(process.cwd(), 'reports', hostName, imgFilename);
+          const fullImgPath = path.join(reportDir, imgFilename);
 
           await page.screenshot({ path: fullImgPath, fullPage: true, animations: 'disabled' });
           screenshotPath = imgFilename;
@@ -114,6 +101,7 @@ export async function executeSiteAudit(
       console.log(`[Running: ${currentProgress}/${calculatedTotal}] ${statusIndicator} | HTTP ${statusCode} | Accessibility: ${a11yIndicator} | SEO: ${seoIndicator}`);
       console.log(`   🔗 Path: ${url}\n`);
 
+      // Push cleanly ONCE per page loop
       structuredPagesList.push({
         url,
         status: statusCode,
@@ -122,7 +110,8 @@ export async function executeSiteAudit(
         a11yDetails: pageA11yDetails,
         seoDetails: pageSeoDetails,
         seoPassDetails: pageSeoPassDetails,
-        screenshotPath
+        screenshotPath,
+        visualResults 
       });
 
       return { a11yErrors: a11yErrorsOnPage, seoScore: seoScoreOnPage };
@@ -131,8 +120,6 @@ export async function executeSiteAudit(
     console.error('Pipeline orchestrator root exception:', err);
   } finally {
     process.off('SIGINT', handleInterrupt);
-    // 🔥 5. CLOSE STANDALONE POOL: Transmit all remaining visual AI data safely to the cloud
-    await closeVisualAiAuditorPool();
   }
 
   backfillIncompletePages(executionSummary, structuredPagesList, wasInterrupted);

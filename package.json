@@ -4,9 +4,11 @@
   "description": "Automated Web Accessibility, SEO, and Core Functional Audit Crawler",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
-    "start": "tsc && node dist/index.js"
+    "start": "ts-node src/index.ts",
+    "test:visual": "npx playwright test tests/visual.spec.ts --headed",
+    "test:visual:update": "npx playwright test tests/visual.spec.ts --update-snapshots --headed"
   },
+
   "dependencies": {
     "@applitools/eyes-playwright": "^1.47.9",
     "@axe-core/playwright": "^4.9.1",

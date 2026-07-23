@@ -17,7 +17,7 @@ export interface PageAuditResult {
   a11yDetails: A11yErrorDetail[];
   seoDetails: string[];
   seoPassDetails: string[]; 
-  visualAiUrl? :string
+  visualResults? :any[]
 }
 
 export interface RunHistoryRecord {

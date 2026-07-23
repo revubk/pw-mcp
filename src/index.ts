@@ -16,7 +16,7 @@ async function bootstrapApplication(): Promise<void> {
       config.isHeadless,
       config.chosenDevice,
       config.pageCap,
-      config.runMcpAgent // 🔥 Linked preference directly to your core loop process thread
+      config.runMcpAgent 
     );
   } catch (error) {
     console.error('System bootstrap engine failed to initialize:', error);
