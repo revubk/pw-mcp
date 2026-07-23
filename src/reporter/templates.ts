@@ -1,10 +1,10 @@
-import { DetailedReportData, PageAuditResult } from '../types/audit';
-import { compileVisualDrawerHtml } from './components/visualDrawer';
+import { DetailedReportData, PageAuditResult } from "../types/audit";
+import { compileVisualDrawerHtml } from "./components/visualDrawer";
 
 export function renderPageBlockTemplate(page: PageAuditResult): string {
-    const visualHtml = compileVisualDrawerHtml(page.visualResults);
+  const visualHtml = compileVisualDrawerHtml(page.visualResults);
 
-    return `
+  return `
     <details class="page-accordion" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 16px; overflow: hidden;">
       <summary style="padding: 16px 20px; background: #f8fafc; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0;">
         <strong style="font-size: 14px; color: #0f172a; word-break: break-all;">${page.url}</strong>
@@ -23,18 +23,22 @@ export function renderPageBlockTemplate(page: PageAuditResult): string {
 }
 
 export function generateDashboardHtml(data: DetailedReportData): string {
-    const totalPages = data.pages.length;
-    const passedPages = data.pages.filter(p => p.status < 400 && p.a11yErrors === 0).length;
+  const totalPages = data.pages.length;
+  const passedPages = data.pages.filter(
+    (p) => p.status < 400 && p.a11yErrors === 0,
+  ).length;
 
-    // Calculate total visual regressions
-    let totalVisualRegressions = 0;
-    data.pages.forEach(p => {
-        if (p.visualResults) {
-            totalVisualRegressions += p.visualResults.filter((v: any) => v.status === 'FAILED').length;
-        }
-    });
+  // Calculate total visual regressions
+  let totalVisualRegressions = 0;
+  data.pages.forEach((p) => {
+    if (p.visualResults) {
+      totalVisualRegressions += p.visualResults.filter(
+        (v: any) => v.status === "FAILED",
+      ).length;
+    }
+  });
 
-    return `
+  return `
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -82,16 +86,16 @@ export function generateDashboardHtml(data: DetailedReportData): string {
         </div>
         <div class="metric-card">
           <div>Visual Regressions</div>
-          <div class="metric-value" style="color: ${totalVisualRegressions > 0 ? 'var(--danger)' : 'var(--success)'}">${totalVisualRegressions}</div>
+          <div class="metric-value" style="color: ${totalVisualRegressions > 0 ? "var(--danger)" : "var(--success)"}">${totalVisualRegressions}</div>
         </div>
         <div class="metric-card">
           <div>A11y Violations</div>
-          <div class="metric-value" style="color: ${data.a11yViolationCount > 0 ? 'var(--warning)' : 'var(--success)'}">${data.a11yViolationCount}</div>
+          <div class="metric-value" style="color: ${data.a11yViolationCount > 0 ? "var(--warning)" : "var(--success)"}">${data.a11yViolationCount}</div>
         </div>
       </div>
 
       <h2>Detailed Page Audits</h2>
-      ${data.pages.map(page => generatePageCard(page, data.runId)).join('')}
+      ${data.pages.map((page) => generatePageCard(page, data.runId)).join("")}
 
     </body>
     </html>
@@ -99,13 +103,13 @@ export function generateDashboardHtml(data: DetailedReportData): string {
 }
 
 function generatePageCard(page: PageAuditResult, runId: string): string {
-    const isBroken = page.status >= 400;
+  const isBroken = page.status >= 400;
 
-    return `
+  return `
     <div class="page-card">
       <div class="page-header">
         <h3><a href="${page.url}" target="_blank">${page.url}</a></h3>
-        <span class="status-badge ${isBroken ? 'fail' : 'pass'}">HTTP ${page.status}</span>
+        <span class="status-badge ${isBroken ? "fail" : "pass"}">HTTP ${page.status}</span>
       </div>
       
       <div class="pillars">
@@ -119,16 +123,16 @@ function generatePageCard(page: PageAuditResult, runId: string): string {
         <!-- Compliance Validation -->
         <div class="pillar" style="border-left-color: var(--warning);">
           <h4>SEO & Accessibility Health</h4>
-          <p><strong>Technical SEO:</strong> <span class="${page.seoScore >= 90 ? 'pass' : 'warn'} status-badge">${page.seoScore}/100</span></p>
-          <p><strong>A11y Violations:</strong> <span class="${page.a11yErrors === 0 ? 'pass' : 'fail'} status-badge">${page.a11yErrors}</span></p>
-          ${page.screenshotPath ? `<p><a href="../${page.screenshotPath}" target="_blank">View A11y Element Map</a></p>` : ''}        </div>
+          <p><strong>Technical SEO:</strong> <span class="${page.seoScore >= 90 ? "pass" : "warn"} status-badge">${page.seoScore}/100</span></p>
+          <p><strong>A11y Violations:</strong> <span class="${page.a11yErrors === 0 ? "pass" : "fail"} status-badge">${page.a11yErrors}</span></p>
+          ${page.screenshotPath ? `<p><a href="../${page.screenshotPath}" target="_blank">View A11y Element Map</a></p>` : ""}        </div>
 
         <!-- Automation Generation -->
         <div class="pillar" style="border-left-color: #a855f7;">
           <h4>Automated Functional Scripts</h4>
           <p style="font-size: 0.9rem; color: #94a3b8;">
             AI-Agent generated E2E flow.<br>
-            Path: <code>tests/${page.url.replace(/[^a-z0-9]/gi, '_')}.spec.ts</code>
+            Path: <code>tests/${page.url.replace(/[^a-z0-9]/gi, "_")}.spec.ts</code>
           </p>
           <span class="status-badge pass">Generated Successfully</span>
         </div>
@@ -139,24 +143,30 @@ function generatePageCard(page: PageAuditResult, runId: string): string {
 }
 
 function generateVisualGrid(visualResults?: any[]): string {
-    if (!visualResults || visualResults.length === 0) {
-        return `<p style="font-size: 0.9rem; color: #94a3b8;">Visual scan disabled or no data.</p>`;
-    }
+  if (!visualResults || visualResults.length === 0) {
+    return `<p style="font-size: 0.9rem; color: #94a3b8;">Visual scan disabled or no data.</p>`;
+  }
 
-    const items = visualResults.map(res => {
-        const isFail = res.status === 'FAILED';
-        const isNew = res.status === 'NEW_BASELINE';
-        const color = isFail ? 'var(--danger)' : isNew ? 'var(--accent)' : 'var(--success)';
+  const items = visualResults
+    .map((res) => {
+      const isFail = res.status === "FAILED";
+      const isNew = res.status === "NEW_BASELINE";
+      const color = isFail
+        ? "var(--danger)"
+        : isNew
+          ? "var(--accent)"
+          : "var(--success)";
 
-        return `
+      return `
       <div class="visual-item">
         <strong style="text-transform: uppercase;">${res.viewport}</strong><br>
         <span style="color: ${color}; font-weight: bold;">${res.status}</span><br>
         <span style="font-size: 0.8rem; color: #94a3b8;">Diff: ${res.diffPercentage ? res.diffPercentage.toFixed(2) : 0}%</span>
-        ${isFail && res.diffPath ? `<br><a href="../../${res.diffPath}" target="_blank" style="color: var(--danger); font-size: 0.8rem;">View Diff</a>` : ''}
+        ${isFail && res.diffPath ? `<br><a href="../../${res.diffPath}" target="_blank" style="color: var(--danger); font-size: 0.8rem;">View Diff</a>` : ""}
       </div>
     `;
-    }).join('');
+    })
+    .join("");
 
-    return `<div class="visual-grid">${items}</div>`;
+  return `<div class="visual-grid">${items}</div>`;
 }

@@ -1,4 +1,4 @@
-import { PageAuditResult } from '../../types/audit';
+import { PageAuditResult } from "../../types/audit";
 
 export function compileFunctionalDrawerHtml(p: PageAuditResult): string {
   const isBroken = p.status >= 400;
@@ -13,7 +13,7 @@ export function compileFunctionalDrawerHtml(p: PageAuditResult): string {
          <tr><td style="padding: 10px 14px; font-weight:600; color:#475569;">Impact Assessment</td><td style="padding: 10px 14px; color: #334155;">Release Blocker. Broken loop intercepted. Link extraction terminated on this route.</td></tr>
       </table>`;
   }
-  
+
   return `
     <div style="background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; padding: 14px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; margin-bottom: 12px;">
        [SUCCESS] Functional status optimal. Connection handshake resolved perfectly.

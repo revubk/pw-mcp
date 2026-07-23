@@ -1,12 +1,17 @@
-import { WebCrawler } from '../crawler/crawler';
-import { generateHistoricReportsHub } from '../reporter/reporter';
-import { DetailedReportData, PageAuditResult, DeviceFormFactor } from '../types/audit';
-import { executeParallelAudits } from './pipeline/taskRunner';
-import { backfillIncompletePages } from './pipeline/dataBackfill';
-import { injectVisualColorsChart } from './pipeline/canvasInject';
-import { executeAutonomousMcpAgent } from './pipeline/mcpClient';
-import { runVisualAudit } from '../auditors/visual';
-import * as path from 'path';
+import * as fs from "fs";
+import { WebCrawler } from "../crawler/crawler";
+import { generateHistoricReportsHub } from "../reporter/reporter";
+import {
+  DetailedReportData,
+  PageAuditResult,
+  DeviceFormFactor,
+} from "../types/audit";
+import { executeParallelAudits } from "./pipeline/taskRunner";
+import { backfillIncompletePages } from "./pipeline/dataBackfill";
+import { injectVisualColorsChart } from "./pipeline/canvasInject";
+import { executeAutonomousMcpAgent } from "./pipeline/mcpClient";
+import { runVisualAudit } from "../auditors/visual";
+import * as path from "path";
 
 export async function executeSiteAudit(
   targetSite: string,
@@ -16,17 +21,23 @@ export async function executeSiteAudit(
   headless: boolean,
   deviceMode: DeviceFormFactor,
   pageCapValue: number,
-  runMcpAgent: boolean
+  runMcpAgent: boolean,
 ): Promise<void> {
   const runId = Math.random().toString(36).substring(2, 7).toUpperCase();
-  const hostName = new URL(targetSite).hostname.replace(/[^a-z0-9]/gi, '_');
-  const reportDir = path.join(process.cwd(), 'reports', hostName);
+  const hostName = new URL(targetSite).hostname.replace(/[^a-z0-9]/gi, "_");
+  const reportDir = path.join(process.cwd(), "reports", hostName);
 
-  console.log('\n========================================================================');
-  console.log(`🚀 AUTOMATED AUDIT PIPELINE ENGINE INITIALIZED [RUN ID: ${runId}]`);
+  console.log(
+    "\n========================================================================",
+  );
+  console.log(
+    `🚀 AUTOMATED AUDIT PIPELINE ENGINE INITIALIZED [RUN ID: ${runId}]`,
+  );
   console.log(`🎯 Target Platform  : ${targetSite}`);
   console.log(`📱 Device Emulation : ${deviceMode.toUpperCase()}`);
-  console.log('========================================================================\n');
+  console.log(
+    "========================================================================\n",
+  );
 
   const crawler = new WebCrawler(targetSite);
   const structuredPagesList: PageAuditResult[] = [];
@@ -35,105 +46,153 @@ export async function executeSiteAudit(
 
   const handleInterrupt = (): void => {
     if (!wasInterrupted) {
-      console.log('\n\n⚠️  [USER TERMINATION] Compiling structural metrics data...');
+      console.log(
+        "\n\n⚠️  [USER TERMINATION] Compiling structural metrics data...",
+      );
       wasInterrupted = true;
       crawler.stopGracefully();
     }
   };
-  process.on('SIGINT', handleInterrupt);
+  process.on("SIGINT", handleInterrupt);
 
   let executionSummary: any[] = [];
   try {
-    executionSummary = await crawler.startCrawl(headless, runId, deviceMode, pageCapValue, async (page, url, statusCode, currentProgress, calculatedTotal) => {
-      let a11yErrorsOnPage = 0;
-      let seoScoreOnPage = 100;
-      let pageA11yDetails: any[] = [];
-      let pageSeoDetails: string[] = [];
-      let pageSeoPassDetails: string[] = [];
-      let screenshotPath: string | undefined = undefined;
-      let visualResults: any[] = []; // Store the new native Playwright visual metrics
+    executionSummary = await crawler.startCrawl(
+      headless,
+      runId,
+      deviceMode,
+      pageCapValue,
+      async (page, url, statusCode, currentProgress, calculatedTotal) => {
+        let a11yErrorsOnPage = 0;
+        let seoScoreOnPage = 100;
+        let pageA11yDetails: any[] = [];
+        let pageSeoDetails: string[] = [];
+        let pageSeoPassDetails: string[] = [];
+        let screenshotPath: string | undefined = undefined;
+        let visualResults: any[] = [];
 
-      if (statusCode < 400) {
-        // 1. Fire Decoupled Parallel Task Auditor Component
-        const audits = await executeParallelAudits(page, url, scanA11y, scanSeo, deviceMode);
+        if (statusCode < 400) {
+          const audits = await executeParallelAudits(
+            page,
+            url,
+            scanA11y,
+            scanSeo,
+            deviceMode,
+          );
 
-        a11yErrorsOnPage = audits.a11yErrorsOnPage;
-        pageA11yDetails = audits.pageA11yDetails;
-        seoScoreOnPage = audits.seoScoreOnPage;
-        pageSeoDetails = audits.pageSeoDetails;
-        pageSeoPassDetails = audits.pageSeoPassDetails;
-        aggregateA11yIssues += a11yErrorsOnPage;
+          a11yErrorsOnPage = audits.a11yErrorsOnPage;
+          pageA11yDetails = audits.pageA11yDetails;
+          seoScoreOnPage = audits.seoScoreOnPage;
+          pageSeoDetails = audits.pageSeoDetails;
+          pageSeoPassDetails = audits.pageSeoPassDetails;
+          aggregateA11yIssues += a11yErrorsOnPage;
 
-        // 2. Fire MCP Agent for Functional Test Generation
-        if (runMcpAgent) {
-          console.log(`🤖 [MCP AGENT] Spawning background automation script compiler for: ${url}`);
-          const activeScriptFile = await executeAutonomousMcpAgent(page, url);
-          console.log(`   💾 Automated test compiled and saved cleanly to: ${activeScriptFile}`);
+          if (runMcpAgent) {
+            console.log(
+              `🤖 [MCP AGENT] Spawning background automation script compiler for: ${url}`,
+            );
+            const activeScriptFile = await executeAutonomousMcpAgent(page, url);
+            console.log(
+              `   💾 Automated test compiled and saved cleanly to: ${activeScriptFile}`,
+            );
+          }
+
+          if (scanVisual) {
+            visualResults = await runVisualAudit(page, url, reportDir);
+          }
+
+          if (scanA11y && a11yErrorsOnPage > 0) {
+            await injectVisualColorsChart(page, pageA11yDetails);
+            await page.waitForTimeout(1000);
+
+            const fileSafeName = url
+              .replace(/[^a-z0-9]/gi, "_")
+              .toLowerCase()
+              .substring(0, 40);
+            const imgFilename = `screenshots/map_${runId}_${fileSafeName}.png`;
+            const fullImgPath = path.join(reportDir, imgFilename);
+
+            await page.screenshot({
+              path: fullImgPath,
+              fullPage: true,
+              animations: "disabled",
+            });
+            screenshotPath = imgFilename;
+          }
+        } else {
+          pageSeoDetails = [
+            `Functional Failure Node: Server error [HTTP ${statusCode}].`,
+          ];
+          pageA11yDetails = [];
+          pageSeoPassDetails = [];
         }
 
-        // 3. Fire Native Playwright Visual Diff Engine
-        if (scanVisual) {
-          visualResults = await runVisualAudit(page, url, reportDir);
-        }
+        const statusIndicator = statusCode >= 400 ? "❌ FAIL" : "✅ PASS";
+        const a11yIndicator = scanA11y
+          ? a11yErrorsOnPage > 0
+            ? `⚠️ ${a11yErrorsOnPage} Flags`
+            : "Clear"
+          : "Disabled";
+        const seoIndicator = scanSeo
+          ? seoScoreOnPage === 100
+            ? "Optimal"
+            : `⚠️ ${seoScoreOnPage}/100`
+          : "Disabled";
 
-        // 4. Fire Decoupled Canvas Color Tagging Component (For A11y UI Maps)
-        if (scanA11y && a11yErrorsOnPage > 0) {
-          await injectVisualColorsChart(page, pageA11yDetails);
-          await page.waitForTimeout(1000);
+        console.log(
+          `[Running: ${currentProgress}/${calculatedTotal}] ${statusIndicator} | HTTP ${statusCode} | Accessibility: ${a11yIndicator} | SEO: ${seoIndicator}`,
+        );
+        console.log(`   🔗 Path: ${url}\n`);
 
-          const fileSafeName = url.replace(/[^a-z0-9]/gi, '_').toLowerCase().substring(0, 40);
-          const imgFilename = `screenshots/map_${runId}_${fileSafeName}.png`;
-          const fullImgPath = path.join(reportDir, imgFilename);
+        structuredPagesList.push({
+          url,
+          status: statusCode,
+          a11yErrors: a11yErrorsOnPage,
+          seoScore: seoScoreOnPage,
+          a11yDetails: pageA11yDetails,
+          seoDetails: pageSeoDetails,
+          seoPassDetails: pageSeoPassDetails,
+          screenshotPath,
+          visualResults,
+        });
 
-          await page.screenshot({ path: fullImgPath, fullPage: true, animations: 'disabled' });
-          screenshotPath = imgFilename;
-        }
-      } else {
-        pageSeoDetails = [`Functional Failure Node: Server error [HTTP ${statusCode}].`];
-        pageA11yDetails = [];
-        pageSeoPassDetails = [];
-      }
-
-      const statusIndicator = statusCode >= 400 ? '❌ FAIL' : '✅ PASS';
-      const a11yIndicator = scanA11y ? (a11yErrorsOnPage > 0 ? `⚠️ ${a11yErrorsOnPage} Flags` : 'Clear') : 'Disabled';
-      const seoIndicator = scanSeo ? (seoScoreOnPage === 100 ? 'Optimal' : `⚠️ ${seoScoreOnPage}/100`) : 'Disabled';
-
-      console.log(`[Running: ${currentProgress}/${calculatedTotal}] ${statusIndicator} | HTTP ${statusCode} | Accessibility: ${a11yIndicator} | SEO: ${seoIndicator}`);
-      console.log(`   🔗 Path: ${url}\n`);
-
-      // Push cleanly ONCE per page loop
-      structuredPagesList.push({
-        url,
-        status: statusCode,
-        a11yErrors: a11yErrorsOnPage,
-        seoScore: seoScoreOnPage,
-        a11yDetails: pageA11yDetails,
-        seoDetails: pageSeoDetails,
-        seoPassDetails: pageSeoPassDetails,
-        screenshotPath,
-        visualResults 
-      });
-
-      return { a11yErrors: a11yErrorsOnPage, seoScore: seoScoreOnPage };
-    });
+        return { a11yErrors: a11yErrorsOnPage, seoScore: seoScoreOnPage };
+      },
+    );
   } catch (err) {
-    console.error('Pipeline orchestrator root exception:', err);
+    console.error("Pipeline orchestrator root exception:", err);
   } finally {
-    process.off('SIGINT', handleInterrupt);
+    process.off("SIGINT", handleInterrupt);
   }
 
-  backfillIncompletePages(executionSummary, structuredPagesList, wasInterrupted);
+  backfillIncompletePages(
+    executionSummary,
+    structuredPagesList,
+    wasInterrupted,
+  );
 
   const detailedPayload: DetailedReportData = {
     runId,
     targetUrl: targetSite,
     timestamp: new Date().toLocaleString(),
     deviceMode: deviceMode,
-    brokenCount: structuredPagesList.filter(r => r.status >= 400).length,
+    brokenCount: structuredPagesList.filter((r) => r.status >= 400).length,
     a11yViolationCount: aggregateA11yIssues,
     pages: structuredPagesList,
-    incompletePages: crawler.queue
+    incompletePages: crawler.queue,
   };
+  // Save discovered URLs dynamically for the Playwright Visual Runner
+  const discoveredUrls = structuredPagesList.map((p) => p.url);
+  const lastCrawlPath = path.join(
+    process.cwd(),
+    "reports",
+    "last_crawled_urls.json",
+  );
+  fs.writeFileSync(
+    lastCrawlPath,
+    JSON.stringify(discoveredUrls, null, 2),
+    "utf8",
+  );
 
   generateHistoricReportsHub(detailedPayload);
 }

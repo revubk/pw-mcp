@@ -1,13 +1,13 @@
-import { Page } from 'playwright';
-import { runAccessibilityAudit } from '../../auditors/accessibility';
-import { runSeoAudit } from '../../auditors/seo';
+import { Page } from "playwright";
+import { runAccessibilityAudit } from "../../auditors/accessibility";
+import { runSeoAudit } from "../../auditors/seo";
 
 export async function executeParallelAudits(
   page: Page,
   url: string,
   scanA11y: boolean,
   scanSeo: boolean,
-  deviceMode: 'desktop' | 'tablet' | 'mobile'
+  deviceMode: "desktop" | "tablet" | "mobile",
 ) {
   const tasks: Promise<any>[] = [];
   if (scanA11y) tasks.push(runAccessibilityAudit(page, url));
@@ -46,6 +46,6 @@ export async function executeParallelAudits(
     pageA11yDetails,
     seoScoreOnPage,
     pageSeoDetails,
-    pageSeoPassDetails
+    pageSeoPassDetails,
   };
 }

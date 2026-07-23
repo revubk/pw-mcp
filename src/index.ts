@@ -1,6 +1,6 @@
-import * as dotenv from 'dotenv';
-import { runTerminalWizard } from './utils/wizard';
-import { executeSiteAudit } from './utils/orchestrator';
+import * as dotenv from "dotenv";
+import { runTerminalWizard } from "./utils/wizard";
+import { executeSiteAudit } from "./utils/orchestrator";
 
 dotenv.config();
 
@@ -16,10 +16,10 @@ async function bootstrapApplication(): Promise<void> {
       config.isHeadless,
       config.chosenDevice,
       config.pageCap,
-      config.runMcpAgent 
+      config.runMcpAgent,
     );
   } catch (error) {
-    console.error('System bootstrap engine failed to initialize:', error);
+    console.error("System bootstrap engine failed to initialize:", error);
     process.exit(1);
   }
 }

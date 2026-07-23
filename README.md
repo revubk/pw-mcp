@@ -3,6 +3,7 @@
 Lightweight TypeScript crawler that scans a target website to detect critical functional failures, accessibility regressions (Axe), and basic SEO issues. Designed as a developer tool to generate site-wide audit reports and a deployable "Go/No-Go" decision signal.
 
 ## Key Features
+
 - Site crawl with internal link discovery (BFS) and duplicate suppression
 - P1 functional checks: broken pages, HTTP errors, navigation failures
 - P2 compliance checks: automated Axe accessibility scans and SEO metadata validations
@@ -10,6 +11,7 @@ Lightweight TypeScript crawler that scans a target website to detect critical fu
 - Pluggable auditors in `src/auditors` for extensibility
 
 ## Project layout
+
 ```
 pw-mcp/
 ├── src/
@@ -25,24 +27,33 @@ pw-mcp/
 ```
 
 ## Tech stack
+
 - TypeScript (Node 18+)
 - Playwright for browser automation
 - @axe-core/playwright for accessibility checks
 
 ## Quickstart
+
 1. Install dependencies:
+
 ```bash
 npm install
 ```
+
 2. Install Playwright browsers (Chromium recommended):
+
 ```bash
 npx playwright install chromium
 ```
+
 3. (Optional) Set a default target URL via env var:
+
 ```bash
 export TARGET_URL="https://example.com"
 ```
+
 4. Run the crawler (example):
+
 ```bash
 npm start
 ```
@@ -50,24 +61,29 @@ npm start
 The CLI will guide you through a small wizard (target URL source, headless/headed, device emulation, page cap, and which audit tiers to run).
 
 ### Output locations
+
 After a run completes, HTML reports are written under:
+
 - `reports/<target-host>/index.html` (dashboard history)
 - `reports/<target-host>/report_<RUN_ID>.html` (per-run details)
 - `reports/<target-host>/history_database.json` (run history)
 
 ## Configuration notes
+
 - `TARGET_URL` is read by `src/utils/wizard.ts` as the default when choosing “Use default from .env file”.
 - Page cap is controlled by the wizard (“Standard Limit (Max 15 Pages)”, “Scan All”, or a custom number).
 
 Check `package.json` for available scripts.
 
 ## AI-generated Playwright test flows (MCP + Gemini)
+
 `src/utils/pipeline/mcpClient.ts` uses Microsoft's Playwright MCP server to extract the interactive
 DOM schema of each crawled page, then sends that schema (plus the instructions in
 `mcp_prompt_blueprint.txt`) to an LLM to generate a short, realistic interaction sequence
 (fill/click/assert) that gets spliced into an auto-generated `*.spec.ts` file under `tests/<host>/`.
 
 **Model priority:**
+
 1. **Gemini (free tier)** — used automatically if `GEMINI_API_KEY` is set.
 2. **LM Studio** (local, OpenAI-compatible server) — used if `LM_STUDIO_MODEL` is set and Gemini
    isn't configured (or its call fails).
@@ -76,6 +92,7 @@ DOM schema of each crawled page, then sends that schema (plus the instructions i
 4. **Static fallback template** — used if no AI backend produces usable output.
 
 ### Setup — Gemini
+
 1. Get a free Gemini API key from Google AI Studio (aistudio.google.com/apikey).
 2. Add it to your `.env` file (create one at the repo root if it doesn't exist):
    ```bash
@@ -87,6 +104,7 @@ DOM schema of each crawled page, then sends that schema (plus the instructions i
    being used, or a fallback notice if the key is missing/rate-limited.
 
 ### Setup — LM Studio (e.g. running a Gemma model locally)
+
 1. In LM Studio, download a Gemma model (e.g. `gemma-2-9b-it` or a smaller quantized variant) and
    load it.
 2. Go to the **Local Server** tab (the `<->` icon) and click **Start Server**. Note the exact model
@@ -108,6 +126,7 @@ LM Studio's console to confirm the server actually received the request (a firew
 the most common failure mode — you'll see a "call failed" log line with the reason if so).
 
 ### Tuning accuracy
+
 The actual generation rules live in `mcp_prompt_blueprint.txt` at the repo root — edit that file to
 change how the model selects selectors, orders interactions, or how many statements it emits. It's
 loaded fresh on every run, so no rebuild is needed. Keep in mind the model only ever receives the
@@ -119,12 +138,13 @@ first.
 current published limits). If you're crawling many pages quickly, expect occasional `429` fallbacks
 to Ollama — this is handled automatically and won't fail the crawl.
 
-
 ## Contributing
+
 - Add new auditors under `src/auditors` and register them with the orchestrator in `src/index.ts`.
 - Keep reports and UI components in `src/reporter` for consistent output.
 
 ## Notes
+
 - This repo is intended as a developer-facing tool for CI / pre-release checks. Integrate results into CI pipelines or extend output formats as needed.
 
 ---

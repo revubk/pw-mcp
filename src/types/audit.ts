@@ -16,15 +16,15 @@ export interface PageAuditResult {
   screenshotPath?: string;
   a11yDetails: A11yErrorDetail[];
   seoDetails: string[];
-  seoPassDetails: string[]; 
-  visualResults? :any[]
+  seoPassDetails: string[];
+  visualResults?: any[];
 }
 
 export interface RunHistoryRecord {
   runId: string;
   timestamp: string;
   targetUrl: string;
-  deviceMode: DeviceFormFactor
+  deviceMode: DeviceFormFactor;
   totalScanned: number;
   brokenCount: number;
   a11yViolations: number;
@@ -32,7 +32,7 @@ export interface RunHistoryRecord {
   reportFilename: string;
 }
 
-export type DeviceFormFactor = 'desktop' | 'tablet' | 'mobile';
+export type DeviceFormFactor = "desktop" | "tablet" | "mobile";
 
 export interface DetailedReportData {
   runId: string;
@@ -49,13 +49,12 @@ export interface WizardAnswers {
   finalUrl: string;
   runA11y: boolean;
   runSeo: boolean;
-  runVisual: boolean; 
+  runVisual: boolean;
   isHeadless: boolean;
-  chosenDevice: 'desktop' | 'tablet' | 'mobile';
+  chosenDevice: "desktop" | "tablet" | "mobile";
   pageCap: number;
   runMcpAgent: boolean;
 }
-
 
 export interface CrawlEngineResult {
   url: string;

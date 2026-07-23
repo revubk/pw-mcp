@@ -1,5 +1,5 @@
 function escapeHtml(text: string): string {
-  if (!text) return '';
+  if (!text) return "";
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -9,7 +9,10 @@ function escapeHtml(text: string): string {
     .replace(/`/g, "&#96;");
 }
 
-export function compileSeoDrawerHtml(seoDetailsList: string[], seoPassList: string[]): string {
+export function compileSeoDrawerHtml(
+  seoDetailsList: string[],
+  seoPassList: string[],
+): string {
   const safeFailures = Array.isArray(seoDetailsList) ? seoDetailsList : [];
   const safePasses = Array.isArray(seoPassList) ? seoPassList : [];
 
@@ -19,7 +22,7 @@ export function compileSeoDrawerHtml(seoDetailsList: string[], seoPassList: stri
     </div>`;
 
   if (safeFailures.length > 0) {
-    let listItems = '';
+    let listItems = "";
     for (const failureItem of safeFailures) {
       listItems += `
         <div style="background: #fffbec; border: 1px solid #fde68a; color: #92400e; padding: 10px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; margin-bottom: 8px; line-height: 1.4; word-wrap: break-word; overflow-wrap: break-word;">
@@ -35,7 +38,7 @@ export function compileSeoDrawerHtml(seoDetailsList: string[], seoPassList: stri
     </div>`;
 
   if (safePasses.length > 0) {
-    let listItems = '';
+    let listItems = "";
     for (const passedItem of safePasses) {
       listItems += `
         <div style="background: #ffffff; border: 1px solid #e2e8f0; color: #15803d; padding: 8px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; margin-bottom: 6px; display: flex; align-items: flex-start; gap: 8px; word-wrap: break-word; overflow-wrap: break-word; white-space: normal;">

@@ -1,8 +1,8 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
-  testDir: 'tests',
-  testMatch: '**/*.spec.ts',
+  testDir: "tests",
+  testMatch: "**/*.spec.ts",
   timeout: 30 * 1000,
 
   expect: {
@@ -12,17 +12,17 @@ export default defineConfig({
 
   fullyParallel: true,
 
-  reporter: [['html', { open: 'always' }]],
+  reporter: [["html", { open: "always" }]],
 
   use: {
-    trace: 'off',
-    screenshot: 'only-on-failure',
+    trace: "off",
+    screenshot: "only-on-failure",
   },
 
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
     },
     // {
     //   name: 'firefox',
