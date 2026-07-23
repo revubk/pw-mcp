@@ -13,5 +13,6 @@
 # Compiled JavaScript Distribution Folders
 dist/
 node_modules/
-reports
+reports/
 tests/*
+test-results/
