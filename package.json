@@ -4,7 +4,7 @@
   "description": "Automated Web Accessibility, SEO, and Core Functional Audit Crawler",
   "main": "dist/index.js",
   "scripts": {
-    "start": "ts-node src/index.ts",
+    "start": "tsc && node dist/index.js",
     "test:visual": "npx playwright test tests/visual.spec.ts --headed",
     "test:visual:update": "npx playwright test tests/visual.spec.ts --update-snapshots --headed",
     "format": "prettier --write ."

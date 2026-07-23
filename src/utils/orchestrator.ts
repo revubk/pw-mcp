@@ -1,3 +1,4 @@
+import { execSync } from "child_process";
 import * as fs from "fs";
 import { WebCrawler } from "../crawler/crawler";
 import { generateHistoricReportsHub } from "../reporter/reporter";
@@ -31,7 +32,7 @@ export async function executeSiteAudit(
     "\n========================================================================",
   );
   console.log(
-    `🚀 AUTOMATED AUDIT PIPELINE ENGINE INITIALIZED [RUN ID: ${runId}]`,
+    `🚀 AUTONOMOUS TEST GENERATION AND REGRESSION TOOL [RUN ID: ${runId}]`,
   );
   console.log(`🎯 Target Platform  : ${targetSite}`);
   console.log(`📱 Device Emulation : ${deviceMode.toUpperCase()}`);
@@ -181,6 +182,7 @@ export async function executeSiteAudit(
     pages: structuredPagesList,
     incompletePages: crawler.queue,
   };
+
   // Save discovered URLs dynamically for the Playwright Visual Runner
   const discoveredUrls = structuredPagesList.map((p) => p.url);
   const lastCrawlPath = path.join(
@@ -194,5 +196,23 @@ export async function executeSiteAudit(
     "utf8",
   );
 
+  // ============================================================
+  // THE BRIDGE: Trigger Playwright Native Visual Engine
+  // ============================================================
+  console.log(
+    "\n📸 [Visual Engine] Firing Playwright Native Visual Regression Suite...",
+  );
+  try {
+    // This tells Playwright to run the visual spec and generate its native HTML report
+    execSync("npx playwright test tests/visual.spec.ts --reporter=html", {
+      stdio: "inherit", // Shows Playwright's output in your current terminal
+      timeout: 120000,
+    });
+    console.log("   ✅ Visual Engine complete. No layout shifts detected.");
+  } catch (visualError) {
+    console.log(
+      "   ⚠️ Visual diffs detected! Playwright has generated the sliders.",
+    );
+  }
   generateHistoricReportsHub(detailedPayload);
 }

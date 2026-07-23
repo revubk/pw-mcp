@@ -1,24 +1,90 @@
 import { DetailedReportData, PageAuditResult } from "../types/audit";
-import { compileVisualDrawerHtml } from "./components/visualDrawer";
+import { compileAccessibilityDrawerHtml } from "./components/a11yDrawer";
+import { compileFunctionalDrawerHtml } from "./components/functional";
+import { compileSeoDrawerHtml } from "./components/seoDrawer";
 
-export function renderPageBlockTemplate(page: PageAuditResult): string {
-  const visualHtml = compileVisualDrawerHtml(page.visualResults);
+export function renderPageBlockTemplate(
+  page: PageAuditResult,
+  runId: string,
+): string {
+  const isBroken = page.status >= 400;
+  const statusColor = isBroken ? "var(--danger)" : "var(--success)";
+  const statusBg = isBroken ? "#fef2f2" : "#f0fdf4";
+
+  const functionalHtml = compileFunctionalDrawerHtml(page);
+  const a11yHtml = compileAccessibilityDrawerHtml(page.a11yDetails);
+
+  const seoDetails = Array.isArray(page.seoDetails) ? page.seoDetails : [];
+  const seoPassDetails = Array.isArray(page.seoPassDetails)
+    ? page.seoPassDetails
+    : [];
+  const seoHtml = compileSeoDrawerHtml(seoDetails, seoPassDetails);
 
   return `
-    <details class="page-accordion" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 16px; overflow: hidden;">
-      <summary style="padding: 16px 20px; background: #f8fafc; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0;">
-        <strong style="font-size: 14px; color: #0f172a; word-break: break-all;">${page.url}</strong>
+    <details class="page-accordion">
+      <summary class="page-summary">
+        <div class="summary-content">
+          <span class="accordion-arrow">▶</span>
+          <strong class="url-text">${page.url}</strong>
+          <span class="status-badge" style="background: ${statusBg}; color: ${statusColor}; border-color: ${statusColor};">
+            HTTP ${page.status}
+          </span>
+        </div>
       </summary>
       
-      <div style="padding: 20px; display: grid; grid-template-columns: 1fr; gap: 20px;">
-         <!-- Your existing functional/seo/a11y blocks go here -->
-         
-         <!-- NEW VISUAL PILLAR -->
-         <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px;">
-            ${visualHtml}
-         </div>
+     <div class="page-details-container">
+
+        <!-- SUB-ACCORDION 1: Functional -->
+        <details class="sub-accordion">
+          <summary class="sub-summary functional-summary">
+             <span class="sub-arrow">▶</span> Functional Handshake & AI Automation
+          </summary>
+          <div class="sub-content">
+            ${functionalHtml}
+            <div class="script-path-box">
+              <div class="script-path-title">AI Script Generation Path:</div>
+              <code style="color: #a855f7; font-size: 13px; font-weight: 600;">tests/${page.url.replace(/[^a-z0-9]/gi, "_")}.spec.ts</code>
+            </div>
+          </div>
+        </details>
+
+        <!-- SUB-ACCORDION 2: SEO -->
+        <details class="sub-accordion">
+          <summary class="sub-summary seo-summary">
+             <span class="sub-arrow">▶</span> Technical SEO Engine (${page.seoScore}/100)
+          </summary>
+          <div class="sub-content">
+            ${seoHtml}
+          </div>
+        </details>
+
+        <!-- SUB-ACCORDION 3: Accessibility -->
+        <details class="sub-accordion">
+          <summary class="sub-summary a11y-summary">
+             <span class="sub-arrow">▶</span> Accessibility (WCAG) Analysis - ${page.a11yErrors} Errors
+          </summary>
+          <div class="sub-content">
+            ${page.screenshotPath ? `<a href="./${page.screenshotPath}" target="_blank" class="a11y-tag-btn">🖼️ View A11y Tagging Map</a>` : ""}
+            ${a11yHtml}
+          </div>
+        </details>
+
+        <!-- SUB-ACCORDION 4: Visual Regression (Playwright Slider) -->
+        <details class="sub-accordion">
+          <summary class="sub-summary" style="border-left-color: #a855f7;">
+             <span class="sub-arrow">▶</span> Visual Layout Engine (Pixel Diff)
+          </summary>
+          <div class="sub-content" style="text-align: center; padding: 30px;">
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+              Playwright has captured desktop, tablet, and mobile snapshots and compared them against the golden baselines.
+            </p>
+            <a href="../../playwright-report/index.html" target="_blank" style="background: #a855f7; color: white; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 700; text-decoration: none; display: inline-block; transition: opacity 0.2s;">
+              🔍 Open Playwright Visual Slider & Diff Report
+            </a>
+          </div>
+        </details>
+
       </div>
-    </details>
   `;
 }
 
@@ -28,16 +94,6 @@ export function generateDashboardHtml(data: DetailedReportData): string {
     (p) => p.status < 400 && p.a11yErrors === 0,
   ).length;
 
-  // Calculate total visual regressions
-  let totalVisualRegressions = 0;
-  data.pages.forEach((p) => {
-    if (p.visualResults) {
-      totalVisualRegressions += p.visualResults.filter(
-        (v: any) => v.status === "FAILED",
-      ).length;
-    }
-  });
-
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -46,127 +102,133 @@ export function generateDashboardHtml(data: DetailedReportData): string {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Autonomous QA Governance Dashboard</title>
       <style>
-        :root { --bg: #0f172a; --surface: #1e293b; --text: #f8fafc; --accent: #3b82f6; --success: #22c55e; --danger: #ef4444; --warning: #f59e0b; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 20px; margin: 0; }
-        .header { border-bottom: 1px solid #334155; padding-bottom: 20px; margin-bottom: 30px; }
-        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
-        .metric-card { background: var(--surface); padding: 20px; border-radius: 8px; border: 1px solid #334155; text-align: center; }
-        .metric-value { font-size: 2rem; font-weight: bold; margin: 10px 0; color: var(--accent); }
-        .page-card { background: var(--surface); margin-bottom: 20px; border-radius: 8px; border: 1px solid #334155; overflow: hidden; }
-        .page-header { padding: 15px 20px; background: #0b0f19; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
-        .page-header h3 { margin: 0; font-size: 1.1rem; word-break: break-all; }
-        .pillars { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; padding: 20px; }
-        .pillar { padding: 15px; border-radius: 6px; background: #0f172a; border-left: 4px solid var(--accent); }
-        .pillar h4 { margin-top: 0; margin-bottom: 10px; color: var(--text); border-bottom: 1px solid #334155; padding-bottom: 5px; }
-        .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
-        .pass { background: rgba(34, 197, 94, 0.2); color: var(--success); }
-        .fail { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
-        .warn { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
-        .visual-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
-        .visual-item { background: var(--surface); padding: 10px; border-radius: 4px; font-size: 0.85rem; }
-        .visual-item img { max-width: 100%; height: auto; margin-top: 10px; border: 1px solid #334155; border-radius: 4px; }
-        a { color: var(--accent); text-decoration: none; }
-        a:hover { text-decoration: underline; }
+        :root {
+          --bg: #f8fafc;
+          --surface: #ffffff;
+          --text: #0f172a;
+          --text-muted: #64748b;
+          --border: #e2e8f0;
+          --accent: #2563eb;
+          --success: #16a34a;
+          --danger: #dc2626;
+          --warning: #d97706;
+        }
+        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 40px; margin: 0; line-height: 1.6; }
+        .dashboard-container { max-width: 1400px; margin: 0 auto; background: var(--surface); padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid var(--border); }
+        .header { border-bottom: 2px solid var(--border); padding-bottom: 24px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .header h1 { margin: 0 0 8px 0; font-size: 26px; font-weight: 800; }
+        .header p { margin: 0; color: var(--text-muted); font-size: 14px; font-weight: 500; }
+        
+        /* Metric Cards */
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px; }
+        .metric-card { background: var(--surface); padding: 24px; border-radius: 10px; border: 1px solid var(--border); text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .metric-value { font-size: 2.5rem; font-weight: 800; margin: 12px 0; color: var(--text); }
+        .metric-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+        
+        /* Main Accordion */
+        details > summary { list-style: none; cursor: pointer; }
+        details > summary::-webkit-details-marker { display: none; }
+        .page-accordion { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: border-color 0.2s; }
+        .page-accordion:hover { border-color: #cbd5e1; }
+        .page-accordion[open] { border-color: var(--accent); }
+        .page-summary { padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid transparent; }
+        .page-accordion[open] .page-summary { border-bottom-color: var(--border); }
+        .summary-content { display: flex; align-items: center; gap: 12px; width: 100%; }
+        .url-text { font-size: 14px; word-break: break-all; flex-grow: 1; }
+        .status-badge { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1px solid; white-space: nowrap; }
+
+        /* Sub Accordions */
+        .page-details-container { padding: 24px; display: flex; flex-direction: column; gap: 16px; background: #ffffff; }
+        .sub-accordion { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .sub-summary { padding: 12px 16px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; background: #f1f5f9; display: flex; align-items: center; gap: 8px; border-left: 4px solid var(--border); }
+        .functional-summary { border-left-color: var(--accent); }
+        .seo-summary { border-left-color: var(--warning); }
+        .a11y-summary { border-left-color: var(--success); }
+        .sub-content { padding: 16px; background: #ffffff; border-top: 1px solid var(--border); }
+
+        /* Arrows */
+        .accordion-arrow, .sub-arrow { font-size: 12px; transition: transform 0.2s; color: var(--text-muted); }
+        details[open] > summary > .summary-content > .accordion-arrow { transform: rotate(90deg); }
+        details[open] > summary > .sub-arrow { transform: rotate(90deg); }
+
+        /* Utilities */
+        .script-path-box { margin-top: 16px; background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid var(--border); }
+        .script-path-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+        .a11y-tag-btn { display: inline-block; background: var(--accent); color: white; padding: 6px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; text-decoration: none; margin-bottom: 12px; }
+        
+        /* Floating Back to Top Button */
+        #backToTop { position: fixed; bottom: 30px; right: 30px; background: var(--accent); color: white; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.2); opacity: 0; transition: opacity 0.3s, transform 0.2s; font-size: 20px; z-index: 1000; pointer-events: none; }
+        #backToTop.visible { opacity: 1; pointer-events: auto; }
+        #backToTop:hover { transform: translateY(-3px); }
+
+        /* Copy Button Styles */
+        pre { position: relative; background: #1e293b; color: #f8fafc; padding: 16px; border-radius: 6px; overflow-x: auto; font-size: 13px; }
+        .copy-btn { position: absolute; top: 8px; right: 8px; background: #334155; border: 1px solid #475569; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 600; transition: background 0.2s; }
+        .copy-btn:hover { background: #475569; }
       </style>
     </head>
     <body>
-      <div class="header">
-        <h1>Autonomous Test Generation & Regression Tool</h1>
-        <p>Target: <strong>${data.targetUrl}</strong> | Emulation: <strong>${data.deviceMode.toUpperCase()}</strong> | Run ID: <strong>${data.runId}</strong></p>
+      <div class="dashboard-container">
+        <div class="header">
+          <div>
+            <h1>Autonomous Test Generation Matrix</h1>
+            <p>Target Environment: <strong style="color: var(--text);">${data.targetUrl}</strong> | Emulation Mode: <strong style="color: var(--accent); text-transform: uppercase;">${data.deviceMode}</strong> | Run ID: <strong style="font-family: monospace;">${data.runId}</strong></p>
+          </div>
+          <a href="index.html" style="color: var(--accent); text-decoration: none; font-weight: 600; font-size: 14px;">← Return to History Hub</a>
+        </div>
+
+        <div class="summary-grid">
+          <div class="metric-card">
+            <div class="metric-label">Pages Discovered</div>
+            <div class="metric-value">${totalPages}</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Healthy Pages</div>
+            <div class="metric-value" style="color: var(--success)">${passedPages}</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">A11y Violations</div>
+            <div class="metric-value" style="color: ${data.a11yViolationCount > 0 ? "var(--warning)" : "var(--text)"}">${data.a11yViolationCount}</div>
+          </div>
+        </div>
+
+        <h3 style="font-size: 16px; color: var(--text); margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 8px; display: inline-block;">Granular Page Diagnostics</h3>
+        
+        ${data.pages.map((page) => renderPageBlockTemplate(page, data.runId)).join("")}
       </div>
 
-      <div class="summary-grid">
-        <div class="metric-card">
-          <div>Pages Discovered</div>
-          <div class="metric-value">${totalPages}</div>
-        </div>
-        <div class="metric-card">
-          <div>Healthy Pages</div>
-          <div class="metric-value" style="color: var(--success)">${passedPages}</div>
-        </div>
-        <div class="metric-card">
-          <div>Visual Regressions</div>
-          <div class="metric-value" style="color: ${totalVisualRegressions > 0 ? "var(--danger)" : "var(--success)"}">${totalVisualRegressions}</div>
-        </div>
-        <div class="metric-card">
-          <div>A11y Violations</div>
-          <div class="metric-value" style="color: ${data.a11yViolationCount > 0 ? "var(--warning)" : "var(--success)"}">${data.a11yViolationCount}</div>
-        </div>
-      </div>
+      <button id="backToTop" title="Go to top">↑</button>
 
-      <h2>Detailed Page Audits</h2>
-      ${data.pages.map((page) => generatePageCard(page, data.runId)).join("")}
+      <script>
+        // Back to top behavior
+        const backToTopBtn = document.getElementById("backToTop");
+        window.addEventListener("scroll", () => {
+          if (window.scrollY > 300) {
+            backToTopBtn.classList.add("visible");
+          } else {
+            backToTopBtn.classList.remove("visible");
+          }
+        });
+        backToTopBtn.addEventListener("click", () => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
 
+        // Dynamic Copy buttons for all <pre> blocks
+        document.querySelectorAll('pre').forEach(pre => {
+          const btn = document.createElement('button');
+          btn.className = 'copy-btn';
+          btn.textContent = 'Copy';
+          btn.onclick = () => {
+            const textToCopy = pre.innerText.replace('Copy', '').trim();
+            navigator.clipboard.writeText(textToCopy).then(() => {
+              btn.textContent = 'Copied!';
+              setTimeout(() => btn.textContent = 'Copy', 2000);
+            });
+          };
+          pre.prepend(btn);
+        });
+      </script>
     </body>
     </html>
   `;
-}
-
-function generatePageCard(page: PageAuditResult, runId: string): string {
-  const isBroken = page.status >= 400;
-
-  return `
-    <div class="page-card">
-      <div class="page-header">
-        <h3><a href="${page.url}" target="_blank">${page.url}</a></h3>
-        <span class="status-badge ${isBroken ? "fail" : "pass"}">HTTP ${page.status}</span>
-      </div>
-      
-      <div class="pillars">
-        
-        <!-- UI & Layout Validation -->
-        <div class="pillar" style="border-left-color: var(--accent);">
-          <h4>Visual UI & Layout</h4>
-          ${generateVisualGrid(page.visualResults)}
-        </div>
-
-        <!-- Compliance Validation -->
-        <div class="pillar" style="border-left-color: var(--warning);">
-          <h4>SEO & Accessibility Health</h4>
-          <p><strong>Technical SEO:</strong> <span class="${page.seoScore >= 90 ? "pass" : "warn"} status-badge">${page.seoScore}/100</span></p>
-          <p><strong>A11y Violations:</strong> <span class="${page.a11yErrors === 0 ? "pass" : "fail"} status-badge">${page.a11yErrors}</span></p>
-          ${page.screenshotPath ? `<p><a href="../${page.screenshotPath}" target="_blank">View A11y Element Map</a></p>` : ""}        </div>
-
-        <!-- Automation Generation -->
-        <div class="pillar" style="border-left-color: #a855f7;">
-          <h4>Automated Functional Scripts</h4>
-          <p style="font-size: 0.9rem; color: #94a3b8;">
-            AI-Agent generated E2E flow.<br>
-            Path: <code>tests/${page.url.replace(/[^a-z0-9]/gi, "_")}.spec.ts</code>
-          </p>
-          <span class="status-badge pass">Generated Successfully</span>
-        </div>
-
-      </div>
-    </div>
-  `;
-}
-
-function generateVisualGrid(visualResults?: any[]): string {
-  if (!visualResults || visualResults.length === 0) {
-    return `<p style="font-size: 0.9rem; color: #94a3b8;">Visual scan disabled or no data.</p>`;
-  }
-
-  const items = visualResults
-    .map((res) => {
-      const isFail = res.status === "FAILED";
-      const isNew = res.status === "NEW_BASELINE";
-      const color = isFail
-        ? "var(--danger)"
-        : isNew
-          ? "var(--accent)"
-          : "var(--success)";
-
-      return `
-      <div class="visual-item">
-        <strong style="text-transform: uppercase;">${res.viewport}</strong><br>
-        <span style="color: ${color}; font-weight: bold;">${res.status}</span><br>
-        <span style="font-size: 0.8rem; color: #94a3b8;">Diff: ${res.diffPercentage ? res.diffPercentage.toFixed(2) : 0}%</span>
-        ${isFail && res.diffPath ? `<br><a href="../../${res.diffPath}" target="_blank" style="color: var(--danger); font-size: 0.8rem;">View Diff</a>` : ""}
-      </div>
-    `;
-    })
-    .join("");
-
-  return `<div class="visual-grid">${items}</div>`;
 }
