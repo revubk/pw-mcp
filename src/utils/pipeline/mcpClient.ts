@@ -27,7 +27,7 @@ export async function executeAutonomousMcpAgent(page: Page, url: string): Promis
         contextOptions: { viewport: { width: 1280, height: 720 } }
       }
     });
-    void mcpServerInstance; 
+    void mcpServerInstance;
 
     const blueprintFilePath = path.join(process.cwd(), 'mcp_prompt_blueprint.txt');
     let userCustomPromptAddon = '';
@@ -35,19 +35,33 @@ export async function executeAutonomousMcpAgent(page: Page, url: string): Promis
       userCustomPromptAddon = fs.readFileSync(blueprintFilePath, 'utf8');
     }
 
-    // Extract precise, high-value interactive components from the viewport DOM frame
+    // Extract rich page metadata and precise interactive components from the viewport
     const interactiveElementsSchema = await page.evaluate(() => {
-      const DOMNodes = document.querySelectorAll('a, button, input, select');
-      return Array.from(DOMNodes).slice(0, 10).map(node => {
-        const htmlElement = node as HTMLElement;
-        return {
-          tagName: htmlElement.tagName.toLowerCase(),
-          id: htmlElement.id ? `#${htmlElement.id}` : '',
-          className: htmlElement.className ? `.${htmlElement.className.trim().split(' ')[0]}` : '',
-          text: htmlElement.textContent?.trim().substring(0, 30) || '',
-          type: htmlElement.getAttribute('type') || ''
-        };
-      });
+      const title = document.title || '';
+      const description = document.querySelector('meta[name="description"]')?.getAttribute('content')?.trim() || '';
+      const firstHeading = Array.from(document.querySelectorAll('h1, h2')).map((element) => element.textContent?.trim()).find(Boolean) || '';
+      const DOMNodes = Array.from(document.querySelectorAll('a, button, input, select, textarea'));
+      return {
+        pageTitle: title,
+        pageDescription: description,
+        firstHeading,
+        url: window.location.href,
+        interactiveElements: DOMNodes.slice(0, 20).map((node) => {
+          const htmlElement = node as HTMLElement;
+          return {
+            tagName: htmlElement.tagName.toLowerCase(),
+            id: htmlElement.id ? `#${htmlElement.id}` : '',
+            className: htmlElement.className ? `.${htmlElement.className.trim().split(/\s+/)[0]}` : '',
+            text: htmlElement.textContent?.trim().substring(0, 80) || '',
+            type: (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) ? node.type || 'text' : (node instanceof HTMLSelectElement ? 'select' : ''),
+            name: ((node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement || node instanceof HTMLSelectElement) ? node.name || '' : ''),
+            placeholder: ((node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) ? node.placeholder || '' : ''),
+            ariaLabel: htmlElement.getAttribute('aria-label') || '',
+            role: htmlElement.getAttribute('role') || '',
+            href: (node instanceof HTMLAnchorElement) ? node.getAttribute('href') || '' : ''
+          };
+        })
+      };
     });
 
     const schemaContextString = JSON.stringify(interactiveElementsSchema, null, 2);
@@ -56,29 +70,67 @@ export async function executeAutonomousMcpAgent(page: Page, url: string): Promis
     const sharedPromptBody = `
 ${userCustomPromptAddon}
 
-Here is the live DOM schema extracted from ${url} (only these elements exist — do not invent others):
+Use the page metadata and schema below to infer the page purpose, business type, and most realistic functional user path. Do not invent selectors, ids, class names, labels, or elements that are not present in this schema.
+
+Page metadata:
+- title: ${interactiveElementsSchema.pageTitle}
+- description: ${interactiveElementsSchema.pageDescription}
+- heading: ${interactiveElementsSchema.firstHeading}
+- url: ${interactiveElementsSchema.url}
+
+Interactive DOM schema:
 ${schemaContextString}
 `.trim();
 
-    // Clean out markdown fences, stray prose, and reasoning tags; keep only
-    // lines that look like real Playwright statements or short comments.
     const sanitizeModelOutput = (raw: string): string => {
       let cleaned = raw.trim();
 
+      if (!cleaned) {
+        return '';
+      }
+
+      // Remove common reasoning and markup wrappers.
       if (cleaned.includes('</think>')) {
         cleaned = cleaned.split('</think>').pop()!.trim();
       }
-
       cleaned = cleaned
-        .replace(/```typescript/gi, '')
-        .replace(/```ts/gi, '')
+        .replace(/<thought>[\s\S]*?<\/thought>/gi, '')
+        .replace(/<\|channel>thought[\s\S]*?<channel\|>/gi, '')
+        .replace(/\[Start thinking\][\s\S]*?(\[End thinking\]|$)/gi, '')
+        .replace(/```(?:typescript|ts)?/gi, '')
         .replace(/```/g, '');
 
-      return cleaned
-        .split('\n')
-        .map((line) => line.trim())
-        .filter((line) => line.startsWith('await ') || line.startsWith('//'))
-        .join('\n    ');
+      const lines = cleaned.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+      const collected: string[] = [];
+      let currentStatement = '';
+
+      for (const line of lines) {
+        if (line.startsWith('//')) {
+          collected.push(line);
+          continue;
+        }
+
+        if (!currentStatement) {
+          currentStatement = line;
+        } else {
+          currentStatement = `${currentStatement} ${line}`;
+        }
+
+        if (currentStatement.trim().endsWith(';')) {
+          collected.push(currentStatement.trim());
+          currentStatement = '';
+        }
+      }
+
+      if (currentStatement && currentStatement.trim().endsWith(';')) {
+        collected.push(currentStatement.trim());
+      }
+
+      const relevant = collected.filter((stmt) =>
+        stmt.startsWith('await ') || stmt.startsWith('const ') || stmt.startsWith('let ') || stmt.startsWith('var ') || stmt.startsWith('//')
+      );
+
+      return relevant.slice(0, 8).join('\n    ');
     };
 
     const geminiApiKey = (process.env.GEMINI_API_KEY || '').trim();
@@ -93,7 +145,8 @@ ${schemaContextString}
           {
             contents: [{ parts: [{ text: sharedPromptBody }] }],
             generationConfig: {
-              temperature: 0.1,
+              temperature: 0.0,
+              topP: 1.0,
               maxOutputTokens: 512
             }
           },
@@ -121,32 +174,48 @@ ${schemaContextString}
     // Only attempted if LM_STUDIO_MODEL is set — otherwise skip straight to Ollama
     // so nothing changes for people who haven't set up LM Studio.
     const lmStudioModel = (process.env.LM_STUDIO_MODEL || '').trim();
-    const lmStudioBaseUrl = (process.env.LM_STUDIO_BASE_URL || 'http://localhost:1234/v1').trim();
+    const lmStudioBaseUrlRaw = (process.env.LM_STUDIO_BASE_URL || 'http://localhost:1234').trim();
+    const lmStudioBaseUrl = lmStudioBaseUrlRaw.replace(/\/+$/g, '');
+    const lmStudioChatEndpoint = lmStudioBaseUrl.includes('/v1')
+      ? `${lmStudioBaseUrl}/chat/completions`
+      : `${lmStudioBaseUrl}/v1/chat/completions`;
 
     if (!generatedActionLines && lmStudioModel) {
       try {
-        console.log(`   🧠 [LM Studio Active] Generating interaction flow via ${lmStudioModel}...`);
+        console.log(`   🧠 [LM Studio Active] Generating interaction flow via ${lmStudioModel}`);
 
         const response = await axios.post(
-          `${lmStudioBaseUrl}/chat/completions`,
+          lmStudioChatEndpoint,
           {
             model: lmStudioModel,
-            messages: [{ role: 'user', content: sharedPromptBody }],
+            messages: [
+              {
+                role: 'system',
+                content: 'Do not use thinking or reasoning mode. Respond with only the final code lines, no <thought> blocks, no explanation.'
+              },
+              { role: 'user', content: sharedPromptBody }
+            ],
             temperature: 0.1,
             max_tokens: 512,
-            stream: false
+            stream: false,
+            // Best-effort: some Gemma 4 GGUF builds respect this to skip the
+            // thinking pass; harmless (ignored) on servers/models that don't.
+            chat_template_kwargs: { enable_thinking: false }
           },
-          { timeout: 45000 }
+          { timeout: 120000 }
         );
 
-        const candidateText = response.data?.choices?.[0]?.message?.content || '';
+        const message = response.data?.choices?.[0]?.message;
+        const candidateText = message?.content || message?.reasoning_content || '';
         generatedActionLines = sanitizeModelOutput(candidateText);
 
         if (!generatedActionLines) {
-          console.log('   ⚠️  LM Studio returned no usable action lines. Falling back.');
+          console.log('   ⚠️  LM Studio returned no usable action lines (often means it only emitted a thinking block). Falling back.');
         }
       } catch (lmStudioErr: any) {
-        const reason = lmStudioErr?.response?.data?.error?.message || lmStudioErr.message;
+        const reason = lmStudioErr?.code === 'ECONNABORTED'
+          ? 'timed out — reasoning models can be slow, consider a bigger timeout or a non-thinking model'
+          : lmStudioErr?.response?.data?.error?.message || lmStudioErr.message;
         console.log(`   ⚠️  LM Studio call failed (${reason}). Is the local server running? Falling back to Ollama.`);
       }
     }
@@ -183,7 +252,7 @@ test('Official Playwright MCP Autonomous Scan — Route: [${url}]', async ({ pag
 
   try {
     // 2. AI Generated Interaction Flow Segment Layer
-    ${generatedActionLines || `// Baseline fallback checks\n    const topLinks = page.locator('a').first();\n    if (await topLinks.count() > 0) await expect(topLinks).toBeDefined();`}
+    ${generatedActionLines || `// Baseline fallback checks\n    await expect(page.locator('body')).toBeVisible();`}
   } catch (flowError) {
     console.log('Interaction pass segment skipped safely:', flowError.message);
   }

@@ -11,20 +11,33 @@ final assertions already exist in the caller — do NOT regenerate them.
    - Every line must be a single, complete Playwright statement ending in ';'.
    - Do not emit import statements, test()/describe() wrappers, or page.goto().
 
-2. GROUNDING — ONLY USE WHAT'S IN THE SCHEMA:
-   - You will be given a JSON array of real DOM elements (tagName, id,
-     className, visible text, input type) extracted from the live page.
-   - Only reference elements that appear in that schema. Never invent a
-     selector, id, class, or label that isn't present in the data.
-   - Prefer the most specific available locator for each element, in this
-     order: #id > text= (for buttons/links with visible text) > tag[type=...]
-     > .className. Fall back to a plain tag selector only if nothing else
-     distinguishes the element.
+2. GROUNDING — USE ONLY PROVIDED PAGE CONTEXT:
+   - You will receive page metadata, page purpose hints, and a JSON schema of
+     interactive page elements.
+   - Do not invent selectors, ids, class names, placeholders, labels, or
+     elements that are not present in that schema.
+   - Prefer the most specific available locator in this order:
+     #id > text= (for buttons/links with visible text) > role= > placeholder=
+     > [name="..."] > tag[type=...] > .className.
+   - If multiple selectors match, choose the one that is most likely to be stable
+     for a meaningful functional flow.
 
-3. INTERACTION LOGIC:
+3. PAGE INTENT AND BUSINESS CONTEXT:
+   - Use the page title, description, heading, and URL hints to infer whether the
+     page is a login/auth page, signup form, search page, product page, contact
+     form, dashboard, or similar business function.
+   - Generate interactions that reflect a realistic user journey for that page.
+     For example, on a login page fill username/email and password then submit.
+     On a search or discovery page enter a query then click the primary search
+     action.
+   - If the page looks like a business landing page, prefer clicking a primary
+     CTA button or interacting with the most important form on the page.
+
+4. INTERACTION LOGIC:
    - For inputs (type=text/search/email/etc.), use page.fill('<selector>', '<realistic sample value>')
      with a value that matches the apparent purpose (e.g. an email-looking
      value for an email field, a short search term for a search box).
+   - For textareas, use page.fill('<selector>', 'Sample message text').
    - For buttons/links, use page.click('<selector>').
    - Order actions the way a real user would complete one coherent task
      (e.g. fill search field, then click the associated search/submit button)
@@ -34,7 +47,7 @@ final assertions already exist in the caller — do NOT regenerate them.
    - Skip elements that are clearly decorative/navigational noise (e.g. bare
      '#' anchors) unless nothing else is available.
 
-4. LIMITS:
+5. LIMITS:
    - Generate at most 6-8 statements total (interactions + assertions combined).
    - If the schema is empty or has no actionable elements, output nothing.
    - Never wrap output in comments explaining what you're doing — code only,
