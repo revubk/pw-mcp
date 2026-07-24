@@ -42,7 +42,6 @@ on:
         default: true
         type: boolean
 
-        
   deployment_status:
 
 permissions:
@@ -90,10 +89,10 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           # Stage the reports folder (which contains history_database.json and new HTML files)
           git add -f reports/
-          
+
           # Only commit and push if there are actually changes
           if git diff --staged --quiet; then
             echo "No new history to commit."

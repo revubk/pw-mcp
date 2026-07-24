@@ -13,36 +13,42 @@ The test wrapper, imports, goto(), and page setup already exist.
 - NO import statements, NO test()/describe() wrappers, NO page.goto() calls.
 
 ═══════════════════════════════════════════════════════════════════════════════
-2. MODERN LOCATOR PRIORITY (USER-CENTRIC APPROACH)
+2. MODERN LOCATOR PRIORITY & STRICT MODE SAFETY (CRITICAL)
 ═══════════════════════════════════════════════════════════════════════════════
+CRITICAL UNIQUENESS & SAFETY RULE: Playwright throws "strict mode" errors if an 
+action (click, fill) targets an element locator that has multiple entries in the DOM. 
+To prevent functional tests from crashing, you MUST make locators as unique as 
+possible. Furthermore, as a mandatory safety fallback, ALWAYS append `.first()` 
+to EVERY locator before performing an action or assertion.
+
 ALWAYS prefer user-facing locators. CSS selectors are a last resort.
 
 TIER 1 (Accessibility-first):
-  - page.getByRole('button', { name: 'Submit' })
-  - page.getByRole('link', { name: 'Profile' })
-  - page.getByRole('checkbox', { name: 'Remember me' })
-  - page.getByRole('heading', { level: 1 })
-  - page.getByRole('combobox') — for selects/dropdowns
+  - page.getByRole('button', { name: 'Submit' }).first()
+  - page.getByRole('link', { name: 'Profile' }).first()
+  - page.getByRole('checkbox', { name: 'Remember me' }).first()
+  - page.getByRole('heading', { level: 1 }).first()
+  - page.getByRole('combobox').first() — for selects/dropdowns
 
 TIER 2 (Form-specific):
-  - page.getByLabel('Email Address')
-  - page.getByPlaceholder('Enter search term')
-  - page.getByAltText('Product image')
+  - page.getByLabel('Email Address').first()
+  - page.getByPlaceholder('Enter search term').first()
+  - page.getByAltText('Product image').first()
 
 TIER 3 (Content-based):
-  - page.getByText('Exact text', { exact: true })
-  - page.getByText('Partial', { exact: false }) — if no exact match exists
+  - page.getByText('Exact text', { exact: true }).first()
+  - page.getByText('Partial', { exact: false }).first()
 
 TIER 4 (Element attributes):
-  - page.locator('[data-testid="submit-btn"]')
-  - page.locator('[name="email"]')
-  - page.locator('#header-logo')
+  - page.locator('[data-testid="submit-btn"]').first()
+  - page.locator('[name="email"]').first()
+  - page.locator('#header-logo').first()
 
 DO NOT fall back to bare CSS selectors (.class-name, div > p) unless absolutely
 necessary, and only if the element has no accessible attributes.
 
 ═══════════════════════════════════════════════════════════════════════════════
-3. WORKFLOW DESIGN — REALISTIC USER JOURNEYS (CRITICAL)
+3. WORKFLOW DESIGN — REALISTIC USER JOURNEYS
 ═══════════════════════════════════════════════════════════════════════════════
 Analyze page metadata (title, URL, heading, description) to infer the PRIMARY
 BUSINESS INTENT. Then construct a coherent, multi-step user journey that:
@@ -78,9 +84,9 @@ different aspects of the outcome:
 
 TYPE A — State Change Assertion (Most Important):
   After a primary action, verify the UI changed in a way that proves success:
-  - await expect(page.getByRole('heading', { name: 'Results' })).toBeVisible();
-  - await expect(page.locator('[data-testid="success-message"]')).toContainText('Order placed');
-  - await expect(page.getByRole('link', { name: 'My Orders' })).toBeVisible();
+  - await expect(page.getByRole('heading', { name: 'Results' }).first()).toBeVisible();
+  - await expect(page.locator('[data-testid="success-message"]').first()).toContainText('Order placed');
+  - await expect(page.getByRole('link', { name: 'My Orders' }).first()).toBeVisible();
 
 TYPE B — URL/Navigation Assertion:
   Verify the page navigated to expected route:
@@ -90,59 +96,48 @@ TYPE B — URL/Navigation Assertion:
 TYPE C — Element Count/Existence Assertion:
   Verify expected number of results, items, or form fields:
   - await expect(page.locator('[data-testid="result-item"]')).toHaveCount(5);
-  - await expect(page.getByRole('listitem')).toBeTruthy();
 
 TYPE D — Text/Content Assertion:
   Verify expected text appears (not just visibility):
-  - await expect(page.getByRole('status')).toContainText('Success');
-  - await expect(page.getByText(/Order/)).toBeVisible();
+  - await expect(page.getByRole('status').first()).toContainText('Success');
+  - await expect(page.getByText(/Order/).first()).toBeVisible();
 
 TYPE E — Form/Input State Assertion:
   Verify form state after submission:
-  - await expect(page.getByPlaceholder('Email')).toHaveValue('');
-  - await expect(page.getByRole('button', { name: 'Submit' })).toBeDisabled();
+  - await expect(page.getByPlaceholder('Email').first()).toHaveValue('');
+  - await expect(page.getByRole('button', { name: 'Submit' }).first()).toBeDisabled();
 
 PICK 1-3 COMPLEMENTARY ASSERTIONS that together prove the workflow succeeded.
-NOT just "page is truthy" or "body is visible" — those are useless.
 
 ═══════════════════════════════════════════════════════════════════════════════
 5. INTERACTION PATTERNS — COVER REALISTIC USER BEHAVIORS
 ═══════════════════════════════════════════════════════════════════════════════
-(NOTE: The following are structural patterns ONLY. You MUST adapt the locators and data strictly to the elements present in the provided schema. Do not hallucinate fields.)
+(NOTE: The following are structural patterns ONLY. You MUST adapt the locators and data strictly to the elements present in the provided schema.)
 
 Form Submission Flow:
-  await page.getByLabel('Email').fill('test@example.com');
-  await page.getByLabel('Password').fill('SecurePass123!');
-  await page.getByRole('button', { name: 'Login' }).click();
+  await page.getByLabel('Email').first().fill('test@example.com');
+  await page.getByLabel('Password').first().fill('SecurePass123!');
+  await page.getByRole('button', { name: 'Login' }).first().click();
   await expect(page).toHaveURL(/\/dashboard/);
 
 Search & Filter Flow:
-  await page.getByPlaceholder('Search').fill('laptop');
-  await page.getByRole('button', { name: 'Search' }).click();
-  await expect(page.locator('[data-testid="result"]')).toHaveCount(1);
-
-Dropdown Selection Flow:
-  await page.getByRole('combobox', { name: 'Category' }).click();
-  await page.getByRole('option', { name: 'Electronics' }).click();
-  await expect(page.getByText('Electronics')).toBeVisible();
-
-Tab Navigation Flow:
-  await page.getByRole('tab', { name: 'Reviews' }).click();
-  await expect(page.getByRole('heading', { name: 'Customer Reviews' })).toBeVisible();
-
-Pagination Flow:
-  await page.getByRole('button', { name: 'Next' }).click();
-  await expect(page).toHaveURL(/page=2/);
+  await page.getByPlaceholder('Search').first().fill('laptop');
+  await page.getByRole('button', { name: 'Search' }).first().click();
   await expect(page.locator('[data-testid="result"]').first()).toBeVisible();
 
+Dropdown Selection Flow:
+  await page.getByRole('combobox', { name: 'Category' }).first().click();
+  await page.getByRole('option', { name: 'Electronics' }).first().click();
+  await expect(page.getByText('Electronics').first()).toBeVisible();
+
+Tab Navigation Flow:
+  await page.getByRole('tab', { name: 'Reviews' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Customer Reviews' }).first()).toBeVisible();
+
 Error Handling Flow:
-  await page.getByLabel('Email').fill('invalid-email');
-  await page.getByRole('button', { name: 'Submit' }).click();
-  await expect(page.getByText(/invalid email/i)).toBeVisible();
-  await page.getByLabel('Email').clear();
-  await page.getByLabel('Email').fill('valid@example.com');
-  await page.getByRole('button', { name: 'Submit' }).click();
-  await expect(page).toHaveURL(/success/);
+  await page.getByLabel('Email').first().fill('invalid-email');
+  await page.getByRole('button', { name: 'Submit' }).first().click();
+  await expect(page.getByText(/invalid email/i).first()).toBeVisible();
 
 ═══════════════════════════════════════════════════════════════════════════════
 6. LIMITS & CONSTRAINTS
@@ -152,7 +147,6 @@ Error Handling Flow:
 - ONE-LINE COMMENT explaining the workflow intent (e.g., "// Complete login flow").
 - If schema is empty or has <2 interactive elements, output NOTHING.
 - NEVER include conditional logic (if/else) — assume elements exist and interact.
-- NEVER use page.click() without context — always use getByRole/getByLabel/etc.
 
 ═══════════════════════════════════════════════════════════════════════════════
 7. QUALITY CHECKLIST (Self-Validate)
@@ -160,9 +154,8 @@ Error Handling Flow:
 Before outputting, ask yourself:
   ✓ Does this test follow a realistic user workflow (not just random clicks)?
   ✓ Is every locator from the TIER 1-3 list, NOT bare CSS?
+  ✓ Did I append .first() to EVERY single locator to prevent strict mode crashes?
   ✓ Are there 1-3 meaningful assertions that prove success?
-  ✓ Would a QA engineer recognize this as a valid test?
-  ✓ Could this test catch real bugs (not just "page loads")?
   ✓ Is all dummy data realistic and domain-appropriate?
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -172,10 +165,3 @@ You will receive a JSON schema of page elements. YOU MUST ONLY interact with
 elements from this schema. Do not invent selectors, labels, or IDs that are
 not explicitly listed. If a desired interaction cannot be fulfilled with the
 provided schema, skip that step.
-
-Example:
-  Schema includes: { tagName: 'input', placeholder: 'Email', name: 'email_field' }
-  → Use: await page.getByPlaceholder('Email').fill(...) OR page.locator('[name="email_field"]')
-  
-  Schema does NOT include a "Submit" button:
-  → Do not invent it. Work with what exists.

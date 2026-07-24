@@ -11,30 +11,135 @@ interface DomElementNode {
   name?: string;
   type?: string;
   href?: string;
+  aria?: string;
+  "data-testid"?: string;
+  value?: string;
+  cssPath?: string;
 }
+
 async function extractVerifiedDomSchema(page: any): Promise<DomElementNode[]> {
   try {
     const rawElements: DomElementNode[] = await page.evaluate(() => {
-      const selectors =
-        'main button, main input, main select, main textarea, main a[href], [role="button"]';
+      const selectors = [
+        "main button",
+        "main input",
+        "main select",
+        "main textarea",
+        "main a[href]",
+        '[role="button"]',
+        "button",
+        "a[href]",
+        "input",
+        "select",
+        "textarea",
+        "[role]",
+      ].join(",");
+
       const nodes = Array.from(document.querySelectorAll(selectors));
 
+      function cssPath(el: Element) {
+        if (!(el instanceof Element)) return "";
+        const parts: string[] = [];
+        let node = el as Element;
+        while (
+          node &&
+          node.nodeType === 1 &&
+          node.tagName.toLowerCase() !== "html"
+        ) {
+          let part = node.tagName.toLowerCase();
+          if (node.id) {
+            part += `#${node.id}`;
+            parts.unshift(part);
+            break;
+          }
+          const cls =
+            node.className && typeof node.className === "string"
+              ? node.className.trim().split(/\s+/)[0]
+              : "";
+          if (cls) part += `.${cls}`;
+          const parent = node.parentElement;
+          if (parent) {
+            const siblings = Array.from(parent.children).filter(
+              (c) => c.tagName === node.tagName,
+            );
+            if (siblings.length > 1) {
+              const idx = siblings.indexOf(node) + 1;
+              part += `:nth-of-type(${idx})`;
+            }
+          }
+          parts.unshift(part);
+          node = node.parentElement as Element;
+        }
+        return parts.join(" > ");
+      }
+
       return nodes
-        .map((el) => ({
-          tagName: el.tagName.toLowerCase(),
-          text: el.textContent?.trim().substring(0, 30) || "",
-          id: el.id || "",
-          className: el.className?.toString().substring(0, 30) || "",
-          placeholder: el.getAttribute("placeholder") || "",
-          name: el.getAttribute("name") || "",
-          type: el.getAttribute("type") || "",
-          href: el.getAttribute("href") || "",
-        }))
-        .slice(0, 25);
+        .map((el) => {
+          const ariaLabel =
+            el.getAttribute &&
+            (el.getAttribute("aria-label") ||
+              el.getAttribute("aria-labelledby"));
+          const label = ((): string | null => {
+            try {
+              if (el instanceof HTMLElement) {
+                const labelled = (el as HTMLElement).getAttribute(
+                  "aria-labelledby",
+                );
+                if (labelled) {
+                  const ref = document.getElementById(labelled);
+                  if (ref)
+                    return ref.textContent?.trim().substring(0, 60) || null;
+                }
+              }
+            } catch (e) {}
+            return null;
+          })();
+
+          const value = (el as HTMLInputElement).value || "";
+          const datasetTest =
+            (el as HTMLElement).dataset?.testid ||
+            el.getAttribute("data-testid") ||
+            "";
+
+          const nodeData: any = { tagName: el.tagName.toLowerCase() };
+
+          const text = el.textContent?.trim().substring(0, 80);
+          if (text) nodeData.text = text;
+          if (el.id) nodeData.id = el.id;
+          if (el.className)
+            nodeData.className = el.className
+              .toString()
+              .trim()
+              .substring(0, 80);
+
+          const placeholder = el.getAttribute && el.getAttribute("placeholder");
+          if (placeholder) nodeData.placeholder = placeholder;
+
+          const name = el.getAttribute && el.getAttribute("name");
+          if (name) nodeData.name = name;
+
+          const type = el.getAttribute && el.getAttribute("type");
+          if (type) nodeData.type = type;
+
+          const href = el.getAttribute && el.getAttribute("href");
+          if (href) nodeData.href = href;
+
+          const finalAria = ariaLabel || label;
+          if (finalAria) nodeData.aria = finalAria;
+
+          if (datasetTest) nodeData["data-testid"] = datasetTest;
+          if (value) nodeData.value = value;
+
+          const path = cssPath(el);
+          if (path) nodeData.cssPath = path;
+
+          return nodeData;
+        })
+        .slice(0, 45);
     });
     return rawElements;
   } catch (err) {
-    console.warn("⚠️ [MCP Agent] Failed to extract DOM schema cleanly:", err);
+    console.warn("⚠️ [MCP Agent] Failed to extract DOM schema:", err);
     return [];
   }
 }
@@ -50,7 +155,7 @@ export async function executeAutonomousMcpAgent(
   const verifiedSchema = await extractVerifiedDomSchema(page);
   if (verifiedSchema.length === 0) {
     console.log(
-      "   ⚠️ [MCP Agent] No interactive content elements found in DOM. Skipping per-element validation script.",
+      "   ⚠️ [MCP Agent] No interactive elements found in DOM. Skipping validation script.",
     );
     return null;
   }
@@ -125,9 +230,12 @@ test('Autonomous Element Validation — Route: ${url}', async ({ page }) => {
 
     return scriptPath;
   } catch (error: any) {
+    const aiErrorMessage =
+      error.response?.data?.error?.message || error.message;
+
     console.error(
       `   ❌ [MCP Agent Error] Failed to generate script for ${url}:`,
-      error.message,
+      aiErrorMessage,
     );
     return null;
   }
