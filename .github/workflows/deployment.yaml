@@ -1,4 +1,4 @@
-name: Production Deployment Crawler
+name: Test Deployment Workflow
 
 on:
   workflow_dispatch:
@@ -16,6 +16,31 @@ on:
           - desktop
           - mobile
           - tablet
+      page_cap:
+        description: "Maximum pages to crawl (Set high for 'Scan All')"
+        required: true
+        default: "15"
+        type: string
+      run_a11y:
+        description: "Run Accessibility Compliance (Axe-Core)"
+        required: true
+        default: true
+        type: boolean
+      run_seo:
+        description: "Run Technical SEO Audit (Lighthouse)"
+        required: true
+        default: true
+        type: boolean
+      run_visual:
+        description: "Run Visual AI Layout Verification"
+        required: true
+        default: true
+        type: boolean
+      run_mcp_agent:
+        description: "Enable Autonomous MCP Test Generation"
+        required: true
+        default: true
+        type: boolean
 
   deployment_status:
 
@@ -43,8 +68,14 @@ jobs:
       - name: Execute Autonomous Crawler Pipeline
         run: npm run start
         env:
+          # Pipeline configuration variables
           TARGET_URL: ${{ inputs.target_url || github.event.deployment_status.target_url || 'https://lbb.in/' }}
           DEVICE_MODE: ${{ inputs.device_mode || 'desktop' }}
+          PAGE_CAP: ${{ inputs.page_cap || '15' }}
+          RUN_A11Y: ${{ inputs.run_a11y }}
+          RUN_SEO: ${{ inputs.run_seo }}
+          RUN_VISUAL: ${{ inputs.run_visual }}
+          RUN_MCP_AGENT: ${{ inputs.run_mcp_agent }}
           CI: "true"
 
           LM_STUDIO_URL: ${{ secrets.PROD_LLM_URL || 'http://localhost:1234/v1/chat/completions' }}

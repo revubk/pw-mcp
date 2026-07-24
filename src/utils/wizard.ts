@@ -10,18 +10,18 @@ export async function runTerminalWizard(): Promise<WizardAnswers> {
 
   if (process.env.CI === "true") {
     console.log(
-      `🤖 [CI Mode] Bypassing interactive prompt. Using Target URL: ${envUrl}`,
+      `🤖 [CI Mode] Bypassing interactive prompt. Reading configuration from CI environment...`,
     );
 
     return {
-      finalUrl: envUrl,
-      runA11y: true,
-      runSeo: true,
-      runVisual: true,
+      finalUrl: process.env.TARGET_URL || envUrl,
+      runA11y: process.env.RUN_A11Y !== "false",
+      runSeo: process.env.RUN_SEO !== "false",
+      runVisual: process.env.RUN_VISUAL !== "false",
+      runMcpAgent: process.env.RUN_MCP_AGENT !== "false",
       isHeadless: true,
       chosenDevice: (process.env.DEVICE_MODE as DeviceFormFactor) || "desktop",
-      pageCap: 15,
-      runMcpAgent: true,
+      pageCap: parseInt(process.env.PAGE_CAP || "15", 10),
     };
   }
 

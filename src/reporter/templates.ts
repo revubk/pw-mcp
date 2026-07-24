@@ -128,14 +128,14 @@ export function renderPageBlockTemplate(
                 : hasVisualNewBaseline
                   ? `
               <div style="text-align: center; padding: 24px; color: #1d4ed8; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
-                <strong>🆕 Visual Baseline Created</strong><br>
-                <span style="font-size: 13px; color: #1e3a8a;">This page did not have an existing baseline. Current image is saved as the Baseline.</span>
+                <strong>🆕 New Baseline Created</strong><br>
+                <span style="font-size: 13px; color: #1e3a8a;">Baseline image did not exist before this run, so the current screenshot was saved as the new baseline.</span>
               </div>
             `
                   : `
               <div style="text-align: center; padding: 24px; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
-                <strong>✅ Visual Layout Verified / Baseline Established</strong><br>
-                <span style="font-size: 13px; color: #166534;">No layout regression found against central baseline storage.</span>
+                <strong>✅ Visual Layout Verified</strong><br>
+                <span style="font-size: 13px; color: #166534;">This page was compared against an existing baseline and no visual regression was detected.</span>
               </div>
             `
             }

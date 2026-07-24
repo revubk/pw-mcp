@@ -204,7 +204,7 @@ export async function executeSiteAudit(
   let playwrightPassed = true;
   try {
     execSync(
-      "npx playwright test tests/visual/visual.spec.ts --reporter=html",
+      "npx playwright test tests/visual/visual.spec.ts --reporter=html --workers=1",
       {
         stdio: "inherit",
         timeout: 300000,
