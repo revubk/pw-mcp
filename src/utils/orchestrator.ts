@@ -187,70 +187,82 @@ export async function executeSiteAudit(
   // =========================================================================
   // THE BRIDGE: Trigger Playwright Native Visual Engine
   // =========================================================================
-  
-  const discoveredUrls = structuredPagesList.map(p => p.url);
-  const reportsGlobalDir = path.join(process.cwd(), 'reports');
+
+  const discoveredUrls = structuredPagesList.map((p) => p.url);
+  const reportsGlobalDir = path.join(process.cwd(), "reports");
   if (!fs.existsSync(reportsGlobalDir)) {
     fs.mkdirSync(reportsGlobalDir, { recursive: true });
   }
-  const lastCrawlPath = path.join(reportsGlobalDir, 'last_crawled_urls.json');
-  fs.writeFileSync(lastCrawlPath, JSON.stringify(discoveredUrls, null, 2), 'utf8');
+  const lastCrawlPath = path.join(reportsGlobalDir, "last_crawled_urls.json");
+  fs.writeFileSync(
+    lastCrawlPath,
+    JSON.stringify(discoveredUrls, null, 2),
+    "utf8",
+  );
 
   // 1. Execute Playwright programmatically
-  console.log('\n📸 Firing Playwright Native Visual Regression Suite...');
+  console.log("\n📸 Firing Playwright Native Visual Regression Suite...");
   let playwrightPassed = true;
   try {
-    execSync('npx playwright test tests/visual.spec.ts --reporter=html', {
-      stdio: 'inherit',
+    execSync("npx playwright test tests/visual.spec.ts --reporter=html", {
+      stdio: "inherit",
       timeout: 300000,
-      env: { 
-        ...process.env, 
-        CI: 'true',
-        DEVICE_MODE: deviceMode
-      }
+      env: {
+        ...process.env,
+        CI: "true",
+        DEVICE_MODE: deviceMode,
+      },
     });
-    console.log('   ✅ Visual Engine complete. No layout shifts detected.');
+    console.log("   ✅ Visual Engine complete. No layout shifts detected.");
   } catch (e) {
     playwrightPassed = false;
-    console.log('   ⚠️ Visual diffs or test failures detected!');
+    console.log("   ⚠️ Visual diffs or test failures detected!");
   }
 
   // 2. Read the JSON bridge file created by tests/visual.spec.ts
   let visualData: any[] = [];
-  const bridgePath = path.join(reportsGlobalDir, 'visual_bridge.json');
+  const bridgePath = path.join(reportsGlobalDir, "visual_bridge.json");
   if (fs.existsSync(bridgePath)) {
     try {
-      visualData = JSON.parse(fs.readFileSync(bridgePath, 'utf8'));
+      visualData = JSON.parse(fs.readFileSync(bridgePath, "utf8"));
     } catch (err) {
       console.warn("Could not parse visual_bridge.json");
     }
   }
 
   // 3. Update the Knowledge Ledger based on run results
-  const ledgerPath = path.join(reportsGlobalDir, 'knowledge_ledger.json');
+  const ledgerPath = path.join(reportsGlobalDir, "knowledge_ledger.json");
   let knowledgeLedger: Record<string, string> = {};
   if (fs.existsSync(ledgerPath)) {
-    try { knowledgeLedger = JSON.parse(fs.readFileSync(ledgerPath, 'utf8')); } catch(err) {}
+    try {
+      knowledgeLedger = JSON.parse(fs.readFileSync(ledgerPath, "utf8"));
+    } catch (err) {}
   }
 
-  structuredPagesList.forEach(page => {
-    const vMatch = visualData.find(v => v.url === page.url);
-    if (vMatch && vMatch.status === 'failed') {
-      knowledgeLedger[page.url] = 'Warning: Visual layout shift or interaction failure detected on previous run. Adjust selectors or verify element stability.';
+  structuredPagesList.forEach((page) => {
+    const vMatch = visualData.find((v) => v.url === page.url);
+    if (vMatch && vMatch.status === "failed") {
+      knowledgeLedger[page.url] =
+        "Warning: Visual layout shift or interaction failure detected on previous run. Adjust selectors or verify element stability.";
     } else {
-      knowledgeLedger[page.url] = 'Verified: Page structure and visual baselines stable on last execution.';
+      knowledgeLedger[page.url] =
+        "Verified: Page structure and visual baselines stable on last execution.";
     }
   });
 
-  fs.writeFileSync(ledgerPath, JSON.stringify(knowledgeLedger, null, 2), 'utf8');
+  fs.writeFileSync(
+    ledgerPath,
+    JSON.stringify(knowledgeLedger, null, 2),
+    "utf8",
+  );
   console.log(`   📝 Knowledge ledger updated successfully at: ${ledgerPath}`);
 
   // 4. Merge visual results into main page objects
-  const finalPagesWithVisuals = structuredPagesList.map(page => {
-    const visualMatch = visualData.find(v => v.url === page.url);
+  const finalPagesWithVisuals = structuredPagesList.map((page) => {
+    const visualMatch = visualData.find((v) => v.url === page.url);
     return {
       ...page,
-      visualResults: visualMatch || { status: 'passed' }
+      visualResults: visualMatch || { status: "passed" },
     };
   });
 
@@ -269,7 +281,7 @@ export async function executeSiteAudit(
   // 6. Generate the HTML report & save to the specific host directory
   const dashboardHtml = generateDashboardHtml(finalReportData);
   const reportPath = path.join(reportDir, `run_${runId}.html`);
-  fs.writeFileSync(reportPath, dashboardHtml, 'utf8');
+  fs.writeFileSync(reportPath, dashboardHtml, "utf8");
 
   // 7. Update the history index
   generateHistoricReportsHub(finalReportData);

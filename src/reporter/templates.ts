@@ -1,21 +1,25 @@
-import { DetailedReportData, PageAuditResult } from '../types/audit';
-import { compileAccessibilityDrawerHtml } from './components/a11yDrawer';
-import { compileFunctionalDrawerHtml } from './components/functional';
-import { compileSeoDrawerHtml } from './components/seoDrawer';
+import { DetailedReportData, PageAuditResult } from "../types/audit";
+import { compileAccessibilityDrawerHtml } from "./components/a11yDrawer";
+import { compileFunctionalDrawerHtml } from "./components/functional";
+import { compileSeoDrawerHtml } from "./components/seoDrawer";
 
-export function renderPageBlockTemplate(page: PageAuditResult, runId: string): string {
+export function renderPageBlockTemplate(
+  page: PageAuditResult,
+  runId: string,
+): string {
   const isBroken = page.status >= 400;
-  const statusColor = isBroken ? 'var(--danger)' : 'var(--success)';
-  const statusBg = isBroken ? '#fef2f2' : '#f0fdf4';
+  const statusColor = isBroken ? "var(--danger)" : "var(--success)";
+  const statusBg = isBroken ? "#fef2f2" : "#f0fdf4";
 
   const functionalHtml = compileFunctionalDrawerHtml(page);
   const a11yHtml = compileAccessibilityDrawerHtml(page.a11yDetails);
 
   const seoDetails = Array.isArray(page.seoDetails) ? page.seoDetails : [];
-  const seoPassDetails = Array.isArray(page.seoPassDetails) ? page.seoPassDetails : [];
+  const seoPassDetails = Array.isArray(page.seoPassDetails)
+    ? page.seoPassDetails
+    : [];
   const seoHtml = compileSeoDrawerHtml(seoDetails, seoPassDetails);
 
-  // Extract visual status
   const vResult = (page as any).visualResults;
 
   return `
@@ -31,22 +35,19 @@ export function renderPageBlockTemplate(page: PageAuditResult, runId: string): s
       </summary>
       
       <div class="page-details-container">
-
-        <!-- SUB-ACCORDION 1: Functional -->
         <details class="sub-accordion">
           <summary class="sub-summary functional-summary">
-             <span class="sub-arrow">▶</span> Functional Handshake & AI Automation
+             <span class="sub-arrow">▶</span> Functional Validation & Component Tests
           </summary>
           <div class="sub-content">
             ${functionalHtml}
             <div class="script-path-box">
-              <div class="script-path-title">AI Script Generation Path:</div>
-              <code style="color: #a855f7; font-size: 13px; font-weight: 600;">tests/${page.url.replace(/[^a-z0-9]/gi, '_')}.spec.ts</code>
+              <div class="script-path-title">Generated Test Script Path:</div>
+              <code style="color: #9333ea; font-size: 13px; font-weight: 600;">tests/${page.url.replace(/[^a-z0-9]/gi, "_")}.spec.ts</code>
             </div>
           </div>
         </details>
 
-        <!-- SUB-ACCORDION 2: SEO -->
         <details class="sub-accordion">
           <summary class="sub-summary seo-summary">
              <span class="sub-arrow">▶</span> Technical SEO Engine (${page.seoScore}/100)
@@ -62,21 +63,21 @@ export function renderPageBlockTemplate(page: PageAuditResult, runId: string): s
              <span class="sub-arrow">▶</span> Accessibility (WCAG) Analysis - ${page.a11yErrors} Errors
           </summary>
           <div class="sub-content">
-            ${page.screenshotPath ? `<a href="./${page.screenshotPath}" target="_blank" class="a11y-tag-btn">🖼️ View A11y Tagging Map</a>` : ''}
+            ${page.screenshotPath ? `<a href="./${page.screenshotPath}" target="_blank" class="a11y-tag-btn">🖼️ View Accessibility Heatmap</a>` : ""}
             ${a11yHtml}
           </div>
         </details>
 
-        <!-- SUB-ACCORDION 4: Visual Layout Engine -->
         <details class="sub-accordion">
           <summary class="sub-summary" style="border-left-color: #ec4899;">
              <span class="sub-arrow">▶</span> Visual Layout Engine (Pixel Diff)
           </summary>
           <div class="sub-content">
-            ${vResult && vResult.status === 'failed' && vResult.diffPath ? `
+            ${
+              vResult && vResult.status === "failed" && vResult.diffPath
+                ? `
               <div style="background: #fdf2f8; border: 1px solid #f472b6; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
                 <h4 style="color: #be185d; margin-top: 0;">⚠️ Layout Shift Detected</h4>
-                
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px;">
                   <div>
                     <div style="font-weight: bold; font-size: 12px; margin-bottom: 8px; color: #475569;">BASELINE (EXPECTED)</div>
@@ -87,19 +88,15 @@ export function renderPageBlockTemplate(page: PageAuditResult, runId: string): s
                     <img src="../../${vResult.diffPath}" style="width: 100%; border: 1px solid #f472b6; border-radius: 4px; filter: hue-rotate(310deg) saturate(1.5);" alt="Diff">
                   </div>
                 </div>
-                
-                <div style="margin-top: 20px; text-align: center;">
-                  <a href="../../playwright-report/index.html" target="_blank" style="background: #ec4899; color: white; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 700; text-decoration: none; display: inline-block; transition: background 0.2s;">
-                    🔍 Open Playwright Slider Report
-                  </a>
-                </div>
               </div>
-            ` : `
-              <div style="text-align: center; padding: 30px; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+            `
+                : `
+              <div style="text-align: center; padding: 24px; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
                 <strong>✅ Visual Layout Verified / Baseline Established</strong><br>
-                <span style="font-size: 13px; color: #166534;">No layout shifts detected against the baseline (or a new baseline was successfully captured).</span>
+                <span style="font-size: 13px; color: #166534;">No layout regression found against central baseline storage.</span>
               </div>
-            `}
+            `
+            }
           </div>
         </details>
       </div>
@@ -109,7 +106,10 @@ export function renderPageBlockTemplate(page: PageAuditResult, runId: string): s
 
 export function generateDashboardHtml(data: DetailedReportData): string {
   const totalPages = data.pages.length;
-  const passedPages = data.pages.filter(p => p.status < 400 && p.a11yErrors === 0).length;
+  const passedPages = data.pages.filter(
+    (p) => p.status < 400 && p.a11yErrors === 0,
+  ).length;
+  const brokenPages = data.pages.filter((p) => p.status >= 400).length;
 
   return `
     <!DOCTYPE html>
@@ -118,6 +118,7 @@ export function generateDashboardHtml(data: DetailedReportData): string {
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Autonomous QA Governance Dashboard</title>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       <style>
         :root {
           --bg: #f8fafc;
@@ -133,23 +134,28 @@ export function generateDashboardHtml(data: DetailedReportData): string {
         body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 40px; margin: 0; line-height: 1.6; }
         .dashboard-container { max-width: 1400px; margin: 0 auto; background: var(--surface); padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid var(--border); }
         .header { border-bottom: 2px solid var(--border); padding-bottom: 24px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-end; }
-        .header h1 { margin: 0 0 8px 0; font-size: 26px; font-weight: 800; }
+        .header h1 { margin: 0 0 8px 0; font-size: 28px; font-weight: 800; color: #1e293b; }
         .header p { margin: 0; color: var(--text-muted); font-size: 14px; font-weight: 500; }
         
-        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px; }
-        .metric-card { background: var(--surface); padding: 24px; border-radius: 10px; border: 1px solid var(--border); text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .metric-value { font-size: 2.5rem; font-weight: 800; margin: 12px 0; color: var(--text); }
-        .metric-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
-        
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 40px; }
+        .metric-card { background: var(--surface); padding: 24px; border-radius: 10px; border: 1px solid var(--border); text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+        .metric-value { font-size: 2.2rem; font-weight: 800; margin: 8px 0; color: var(--text); }
+        .metric-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+
+        .charts-container { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 40px; }
+        .chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); display: flex; flex-direction: column; align-items: center; height: 300px; }
+        .chart-box h3 { font-size: 14px; color: var(--text-muted); text-transform: uppercase; margin-top: 0; margin-bottom: 15px; letter-spacing: 0.5px; width: 100%; text-align: left; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        .canvas-wrapper { position: relative; height: 220px; width: 100%; display: flex; justify-content: center; }
+
         details > summary { list-style: none; cursor: pointer; }
         details > summary::-webkit-details-marker { display: none; }
-        .page-accordion { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: border-color 0.2s; }
+        .page-accordion { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; overflow: hidden; transition: border-color 0.2s; }
         .page-accordion:hover { border-color: #cbd5e1; }
         .page-accordion[open] { border-color: var(--accent); }
         .page-summary { padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid transparent; }
         .page-accordion[open] .page-summary { border-bottom-color: var(--border); }
         .summary-content { display: flex; align-items: center; gap: 12px; width: 100%; }
-        .url-text { font-size: 14px; word-break: break-all; flex-grow: 1; }
+        .url-text { font-size: 14px; word-break: break-all; flex-grow: 1; font-weight: 600; color: #334155; }
         .status-badge { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1px solid; white-space: nowrap; }
 
         .page-details-container { padding: 24px; display: flex; flex-direction: column; gap: 16px; background: #ffffff; }
@@ -187,29 +193,95 @@ export function generateDashboardHtml(data: DetailedReportData): string {
           <a href="index.html" style="color: var(--accent); text-decoration: none; font-weight: 600; font-size: 14px;">← Return to History Hub</a>
         </div>
 
-        <div class="summary-grid">
+        <div class="metrics-grid">
           <div class="metric-card">
             <div class="metric-label">Pages Discovered</div>
             <div class="metric-value">${totalPages}</div>
           </div>
           <div class="metric-card">
             <div class="metric-label">Healthy Pages</div>
-            <div class="metric-value" style="color: var(--success)">${passedPages}</div>
+            <div class="metric-value" style="color: var(--success);">${passedPages}</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Broken / Errors</div>
+            <div class="metric-value" style="color: var(--danger);">${brokenPages}</div>
           </div>
           <div class="metric-card">
             <div class="metric-label">A11y Violations</div>
-            <div class="metric-value" style="color: ${data.a11yViolationCount > 0 ? 'var(--warning)' : 'var(--text)'}">${data.a11yViolationCount}</div>
+            <div class="metric-value" style="color: ${data.a11yViolationCount > 0 ? "var(--warning)" : "var(--success)"};">${data.a11yViolationCount}</div>
           </div>
         </div>
 
-        <h3 style="font-size: 16px; color: var(--text); margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 8px; display: inline-block;">Granular Page Diagnostics</h3>
+        <!-- ANALYTICS CHARTS SECTION -->
+        <div class="charts-container">
+          <div class="chart-box">
+            <h3>Site Health Ratio</h3>
+            <div class="canvas-wrapper">
+              <canvas id="healthChart"></canvas>
+            </div>
+          </div>
+          <div class="chart-box">
+            <h3>Accessibility Violations per Page</h3>
+            <div class="canvas-wrapper">
+              <canvas id="a11yChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <h3 style="font-size: 16px; color: var(--text); margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 8px;">Granular Page Diagnostics</h3>
         
-        ${data.pages.map(page => renderPageBlockTemplate(page, data.runId)).join('')}
+        ${data.pages.map((page) => renderPageBlockTemplate(page, data.runId)).join("")}
       </div>
 
       <button id="backToTop" title="Go to top">↑</button>
 
       <script>
+        document.addEventListener("DOMContentLoaded", () => {
+          const healthCtx = document.getElementById('healthChart').getContext('2d');
+          new Chart(healthCtx, {
+            type: 'doughnut',
+            data: {
+              labels: ['Healthy Pages', 'Broken/Error Pages'],
+              datasets: [{
+                data: [${passedPages}, ${brokenPages}],
+                backgroundColor: ['#16a34a', '#dc2626'],
+                borderWidth: 0
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } }
+            }
+          });
+
+          const a11yCtx = document.getElementById('a11yChart').getContext('2d');
+          const pageLabels = ${JSON.stringify(data.pages.map((p) => new URL(p.url).pathname || "/"))};
+          const a11yData = ${JSON.stringify(data.pages.map((p) => p.a11yErrors))};
+
+          new Chart(a11yCtx, {
+            type: 'bar',
+            data: {
+              labels: pageLabels,
+              datasets: [{
+                label: 'WCAG Errors',
+                data: a11yData,
+                backgroundColor: '#d97706',
+                borderRadius: 4
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              scales: {
+                y: { beginAtZero: true, ticks: { precision: 0 } },
+                x: { ticks: { font: { size: 10 }, maxRotation: 45 } }
+              },
+              plugins: { legend: { display: false } }
+            }
+          });
+        });
+
         const backToTopBtn = document.getElementById("backToTop");
         window.addEventListener("scroll", () => {
           if (window.scrollY > 300) {

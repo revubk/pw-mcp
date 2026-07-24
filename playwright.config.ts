@@ -1,20 +1,21 @@
 import { defineConfig, devices } from "@playwright/test";
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
+import * as path from "path";
 
 export default defineConfig({
   testDir: "tests",
 
-  testMatch: "**/*.spec.ts",
+  testMatch: "**/*.*.ts",
 
   timeout: 30 * 1000,
 
   updateSnapshots: "missing",
 
-  snapshotDir: './reports/baselines',
+  snapshotDir: path.join(process.cwd(), "reports", "baselines"),
 
   expect: {
     toHaveScreenshot: {
-      pathTemplate: '{snapshotDir}/{arg}-{ext}',
+      pathTemplate: "{snapshotDir}/{arg}-{ext}",
     },
   },
 

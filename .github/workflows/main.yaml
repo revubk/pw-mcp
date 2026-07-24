@@ -1,36 +1,45 @@
-name: Autonomous QA Pipeline
+name: Pipeline Unit Tests & CI
+
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
-    branches: [main]
+    branches: [main, master]
 
 jobs:
-  audit-and-test:
+  test:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
 
-      - name: Setup Node.js
+    strategy:
+      matrix:
+        node-version: [20.x] # Specify your Node version
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
-          node-version: "20"
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
 
-      - name: Install Dependencies
-        run: npm install
+      - name: Install dependencies
+        run: npm ci
 
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+        run: npx playwright install --with-deps chromium
 
-      - name: Execute Autonomous Crawler & Tests
+      - name: Run Unit Tests via Playwright
+        # Point directly to the unit test folder. Using playwright test for consistency in CI.
+        run: npx playwright test tests/unit --reporter=html
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: npm start
+          # Set CI env var to prevent hanging
+          CI: "true"
 
-      - name: Upload HTML Dashboard
-        uses: actions/upload-artifact@v3
+      - name: Upload Playwright Report
         if: always()
+        uses: actions/upload-artifact@v3
         with:
-          name: compliance-dashboard
-          path: reports/
+          name: playwright-unit-report
+          path: playwright-report/
+          retention-days: 30

@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "start": "tsc && node dist/index.js",
+    "test:unit": "npx playwright test tests/unit --reporter=html",
     "test:visual": "npx playwright test tests/visual.spec.ts --headed",
     "test:visual:update": "npx playwright test tests/visual.spec.ts --update-snapshots --headed",
     "format": "prettier --write ."
