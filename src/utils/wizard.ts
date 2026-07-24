@@ -8,9 +8,11 @@ export async function runTerminalWizard(): Promise<WizardAnswers> {
 
   const envUrl = process.env.TARGET_URL || "https://example.com";
 
-  if (process.env.CI === 'true') {
-    console.log(`🤖 [CI Mode] Bypassing interactive prompt. Using Target URL: ${envUrl}`);
-    
+  if (process.env.CI === "true") {
+    console.log(
+      `🤖 [CI Mode] Bypassing interactive prompt. Using Target URL: ${envUrl}`,
+    );
+
     return {
       finalUrl: envUrl,
       runA11y: true,
@@ -149,7 +151,7 @@ export async function runTerminalWizard(): Promise<WizardAnswers> {
   const runVisual = answers.auditTiers.includes("VISUAL");
   const isHeadless = answers.browserMode;
   const chosenDevice = answers.deviceFormFactor as DeviceFormFactor;
-  
+
   let pageCap = 15;
   if (answers.capProfile === "ALL") {
     pageCap = 99999;

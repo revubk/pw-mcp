@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       target_url:
-        description: 'Target URL to crawl (Overrides .env)'
+        description: "Target URL to crawl (Overrides .env)"
         required: true
-        default: 'https://lbb.in/'
+        default: "https://lbb.in/"
       device_mode:
-        description: 'Device Emulation Mode'
+        description: "Device Emulation Mode"
         required: true
-        default: 'desktop'
+        default: "desktop"
         type: choice
         options:
           - desktop
@@ -31,8 +31,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20.x'
-          cache: 'npm'
+          node-version: "20.x"
+          cache: "npm"
 
       - name: Install Dependencies
         run: npm ci
@@ -45,8 +45,8 @@ jobs:
         env:
           TARGET_URL: ${{ inputs.target_url || github.event.deployment_status.target_url || 'https://lbb.in/' }}
           DEVICE_MODE: ${{ inputs.device_mode || 'desktop' }}
-          CI: 'true'
-          
+          CI: "true"
+
           LM_STUDIO_URL: ${{ secrets.PROD_LLM_URL || 'http://localhost:1234/v1/chat/completions' }}
 
       - name: Upload Audit Dashboard & Artifacts

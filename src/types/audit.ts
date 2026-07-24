@@ -21,6 +21,7 @@ export interface PageAuditResult {
     status: "passed" | "failed" | "new_baseline";
     expectedPath?: string | null;
     diffPath?: string | null;
+    nativeReportHref?: string | null;
   };
 }
 

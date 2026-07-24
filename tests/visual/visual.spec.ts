@@ -98,7 +98,9 @@ test.afterAll(() => {
 
 test.describe(`Autonomous Visual Regression Suite (${device.name.toUpperCase()})`, () => {
   for (const url of TARGET_URLS) {
-    test(`Visual Diff: ${url} on${device.name}`, async ({ page }, testInfo) => {
+    test(`Visual Diff: ${url} on ${device.name}`, async ({
+      page,
+    }, testInfo) => {
       await page.setViewportSize({
         width: device.width,
         height: device.height,
@@ -141,7 +143,9 @@ test.describe(`Autonomous Visual Regression Suite (${device.name.toUpperCase()})
             type: "visual-baseline",
             description: "created",
           });
-          console.log(`🆕 [Visual Engine] Created baseline for ${snapshotName}`);
+          console.log(
+            `🆕 [Visual Engine] Created baseline for ${snapshotName}`,
+          );
           return;
         }
 

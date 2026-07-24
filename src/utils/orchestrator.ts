@@ -232,17 +232,11 @@ export async function executeSiteAudit(
     }
   }
 
-  // 4. Merge visual results into main page objects
-  const finalPagesWithVisuals = structuredPagesList.map((page) => {
-    const visualMatch = visualData.find((v) => v.url === page.url);
-    return {
-      ...page,
-      visualResults: visualMatch || { status: "passed" },
-    };
-  });
-
-  // 5. Build the final report payload
-  const playwrightReportIndexPath = path.join(process.cwd(), "playwright-report", "index.html");
+  const playwrightReportIndexPath = path.join(
+    process.cwd(),
+    "playwright-report",
+    "index.html",
+  );
   const playwrightReportRelativePath = fs.existsSync(playwrightReportIndexPath)
     ? path
         .relative(reportDir, playwrightReportIndexPath)
@@ -250,6 +244,71 @@ export async function executeSiteAudit(
         .join("/")
     : null;
 
+  // 4. Read the native Playwright report HTML and resolve page-level deep links
+  let playwrightReportHtml: string | null = null;
+  if (fs.existsSync(playwrightReportIndexPath)) {
+    try {
+      playwrightReportHtml = fs.readFileSync(playwrightReportIndexPath, "utf8");
+    } catch (err) {
+      console.warn(
+        "Could not read Playwright report for native link extraction.",
+      );
+    }
+  }
+
+  const extractPlaywrightTestLink = (
+    html: string | null,
+    pageUrl: string,
+    deviceMode: DeviceFormFactor,
+  ): string | null => {
+    if (!html) return null;
+    const escapedUrl = pageUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const escapedDevice = deviceMode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = new RegExp(
+      `<a[^>]+href="(#!?testId=[^"]+)"[^>]*>[\s\S]*?${escapedUrl}[\s\S]*?on\s*${escapedDevice}[\s\S]*?<\/a>`,
+      "i",
+    );
+    const match = pattern.exec(html);
+    return match ? match[1] : null;
+  };
+
+  const normalizeAssetPath = (assetPath?: string | null): string | null => {
+    if (!assetPath) return null;
+    const absoluteAssetPath = path.resolve(process.cwd(), assetPath);
+    return path
+      .relative(reportDir, absoluteAssetPath)
+      .split(path.sep)
+      .join("/");
+  };
+
+  const finalPagesWithVisuals = structuredPagesList.map((page) => {
+    const visualMatch = visualData.find((v) => v.url === page.url);
+    const normalizedVisualMatch = visualMatch
+      ? {
+          ...visualMatch,
+          expectedPath: normalizeAssetPath(visualMatch.expectedPath),
+          diffPath: normalizeAssetPath(visualMatch.diffPath),
+        }
+      : null;
+    const nativeReportHash = extractPlaywrightTestLink(
+      playwrightReportHtml,
+      page.url,
+      deviceMode,
+    );
+    const nativeReportHref = nativeReportHash
+      ? `${playwrightReportRelativePath}${nativeReportHash}`
+      : null;
+
+    return {
+      ...page,
+      visualResults: {
+        ...(normalizedVisualMatch || { status: "passed" }),
+        nativeReportHref,
+      },
+    };
+  });
+
+  // 5. Build the final report payload
   const finalReportData: DetailedReportData = {
     runId: runId,
     targetUrl: targetSite,
