@@ -17,7 +17,11 @@ export interface PageAuditResult {
   a11yDetails: A11yErrorDetail[];
   seoDetails: string[];
   seoPassDetails: string[];
-  visualResults?: any[];
+  visualResults: {
+    status: "passed" | "failed";
+    expectedPath?: string | null;
+    diffPath?: string | null;
+  };
 }
 
 export interface RunHistoryRecord {
