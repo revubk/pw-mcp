@@ -1,8 +1,31 @@
 import { test, expect } from "@playwright/test";
-import { generateDashboardHtml } from "../../src/reporter/templates";
-import { DetailedReportData } from "../../src/types/audit";
+import {
+  generateDashboardHtml,
+  renderPageBlockTemplate,
+} from "../../src/reporter/templates";
+import { DetailedReportData, PageAuditResult } from "../../src/types/audit";
 
 test.describe("Dashboard Reporter Logic", () => {
+  test("Reporter should surface visual failures even when no diff image is attached", () => {
+    const pageData: PageAuditResult = {
+      url: "https://lbb.in/",
+      status: 200,
+      a11yErrors: 0,
+      seoScore: 100,
+      a11yDetails: [],
+      seoDetails: [],
+      seoPassDetails: [],
+      visualResults: { status: "failed" },
+    };
+
+    const htmlOutput = renderPageBlockTemplate(pageData, "TEST2");
+
+    expect(htmlOutput).toContain("Layout Shift Detected");
+    expect(htmlOutput).not.toContain(
+      "Visual Layout Verified / Baseline Established",
+    );
+  });
+
   test("Dashboard should accurately categorize functional vs broken pages regardless of A11y errors", () => {
     const mockData: DetailedReportData = {
       runId: "TEST1",

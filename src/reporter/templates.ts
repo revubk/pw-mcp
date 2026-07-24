@@ -21,6 +21,12 @@ export function renderPageBlockTemplate(
   const seoHtml = compileSeoDrawerHtml(seoDetails, seoPassDetails);
 
   const vResult = (page as any).visualResults;
+  const visualStatus = vResult?.status;
+  const hasVisualFailure = visualStatus === "failed";
+  const hasVisualNewBaseline = visualStatus === "new_baseline";
+  const hasVisualDiffAssets = Boolean(
+    vResult?.expectedPath || vResult?.diffPath,
+  );
 
   return `
     <details class="page-accordion">
@@ -74,23 +80,41 @@ export function renderPageBlockTemplate(
           </summary>
           <div class="sub-content">
             ${
-              vResult && vResult.status === "failed" && vResult.diffPath
+              hasVisualFailure
                 ? `
               <div style="background: #fdf2f8; border: 1px solid #f472b6; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
                 <h4 style="color: #be185d; margin-top: 0;">⚠️ Layout Shift Detected</h4>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px;">
-                  <div>
-                    <div style="font-weight: bold; font-size: 12px; margin-bottom: 8px; color: #475569;">BASELINE (EXPECTED)</div>
-                    <img src="../../${vResult.expectedPath}" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 4px;" alt="Baseline">
+                <p style="margin: 8px 0 0; color: #9f1239; font-size: 13px;">The visual diff engine reported a regression for this page.</p>
+                ${
+                  hasVisualDiffAssets
+                    ? `
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px;">
+                    <div>
+                      <div style="font-weight: bold; font-size: 12px; margin-bottom: 8px; color: #475569;">BASELINE (EXPECTED)</div>
+                      <img src="../../${vResult.expectedPath}" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 4px;" alt="Baseline">
+                    </div>
+                    <div>
+                      <div style="font-weight: bold; font-size: 12px; margin-bottom: 8px; color: #be185d;">ACTUAL (PINK = CHANGES)</div>
+                      <img src="../../${vResult.diffPath}" style="width: 100%; border: 1px solid #f472b6; border-radius: 4px; filter: hue-rotate(310deg) saturate(1.5);" alt="Diff">
+                    </div>
                   </div>
-                  <div>
-                    <div style="font-weight: bold; font-size: 12px; margin-bottom: 8px; color: #be185d;">ACTUAL (PINK = CHANGES)</div>
-                    <img src="../../${vResult.diffPath}" style="width: 100%; border: 1px solid #f472b6; border-radius: 4px; filter: hue-rotate(310deg) saturate(1.5);" alt="Diff">
+                `
+                    : `
+                  <div style="margin-top: 16px; padding: 12px; background: #fff7ed; border: 1px solid #fdba74; border-radius: 6px; color: #9a2c00; font-size: 13px;">
+                    Diff images were not attached for this run, so only the failure status is available in the report.
                   </div>
-                </div>
+                `
+                }
               </div>
             `
-                : `
+                : hasVisualNewBaseline
+                  ? `
+              <div style="text-align: center; padding: 24px; color: #1d4ed8; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
+                <strong>🆕 Visual Baseline Created</strong><br>
+                <span style="font-size: 13px; color: #1e3a8a;">This page did not have an existing baseline, so the current render was stored as the initial reference.</span>
+              </div>
+            `
+                  : `
               <div style="text-align: center; padding: 24px; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
                 <strong>✅ Visual Layout Verified / Baseline Established</strong><br>
                 <span style="font-size: 13px; color: #166534;">No layout regression found against central baseline storage.</span>

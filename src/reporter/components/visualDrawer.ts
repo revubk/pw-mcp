@@ -11,8 +11,9 @@ export function compileVisualDrawerHtml(
   let gridItems = "";
 
   for (const res of visualResults) {
-    const isFail = res.status === "FAILED";
-    const isNew = res.status === "NEW_BASELINE";
+    const isFail = res.status === "failed" || res.status === "FAILED";
+    const isNew =
+      res.status === "new_baseline" || res.status === "NEW_BASELINE";
 
     // Assign colors based on status
     const bgColor = isFail ? "#fef2f2" : isNew ? "#eff6ff" : "#f0fdf4";

@@ -48,24 +48,29 @@ const TARGET_URLS = getTargetUrls();
 const device = getDeviceConfig();
 
 test.afterEach(async ({}, testInfo) => {
-  const urlMatch = testInfo.title.match(/Visual Diff: (.*) on/);
+  const urlMatch = testInfo.title.match(/Visual Diff:\s*(.+?)\s+on/i);
   const url = urlMatch ? urlMatch[1] : "Unknown URL";
 
   const isNewBaseline =
     testInfo.error?.message?.includes("A snapshot doesn't exist") ||
     testInfo.error?.message?.includes("A snapshot doesn't exist at");
 
-  if (testInfo.status !== "passed" && !isNewBaseline) {
-    const expected = testInfo.attachments.find((a) =>
-      a.name.includes("expected"),
-    )?.path;
-    const diff = testInfo.attachments.find((a) =>
-      a.name.includes("diff"),
-    )?.path;
+  const expected = testInfo.attachments.find((a) =>
+    a.name.includes("expected"),
+  )?.path;
+  const diff = testInfo.attachments.find((a) => a.name.includes("diff"))?.path;
 
+  if (testInfo.status !== "passed" && !isNewBaseline) {
     visualResults.push({
       url,
       status: "failed",
+      expectedPath: expected ? path.relative(process.cwd(), expected) : null,
+      diffPath: diff ? path.relative(process.cwd(), diff) : null,
+    });
+  } else if (isNewBaseline) {
+    visualResults.push({
+      url,
+      status: "new_baseline",
       expectedPath: expected ? path.relative(process.cwd(), expected) : null,
       diffPath: diff ? path.relative(process.cwd(), diff) : null,
     });

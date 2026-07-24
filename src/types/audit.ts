@@ -18,7 +18,7 @@ export interface PageAuditResult {
   seoDetails: string[];
   seoPassDetails: string[];
   visualResults: {
-    status: "passed" | "failed";
+    status: "passed" | "failed" | "new_baseline";
     expectedPath?: string | null;
     diffPath?: string | null;
   };

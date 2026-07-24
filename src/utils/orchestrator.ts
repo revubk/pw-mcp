@@ -76,7 +76,7 @@ export async function executeSiteAudit(
         let pageSeoPassDetails: string[] = [];
         let screenshotPath: string | undefined = undefined;
         let visualResults: {
-          status: "passed" | "failed";
+          status: "passed" | "failed" | "new_baseline";
           expectedPath?: string | null;
           diffPath?: string | null;
         } = { status: "passed" };
