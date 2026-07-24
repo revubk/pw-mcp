@@ -25,7 +25,11 @@ export function renderPageBlockTemplate(
     ? `${playwrightReportPath}#?q=${encodeURIComponent(`s:failed ${page.url}`)}`
     : undefined;
   const reportLinkHtml = reportLinkHref
-    ? `<p style="margin: 12px 0 0 0; font-size: 13px;"><a href="${reportLinkHref}" target="_blank" style="color: var(--accent); font-weight: 700; text-decoration: underline;">Open Native Playwright Visual Report for this page</a></p>`
+    ? `
+          <div class="link-copy-row">
+            <a href="${reportLinkHref}" target="_blank" class="link-copy-link">Open Native Playwright Visual Report for this page</a>
+            <button type="button" class="link-copy-btn" data-copy-text="${reportLinkHref}" aria-label="Copy report link to clipboard">Copy</button>
+          </div>`
     : "";
 
   const vResult = (page as any).visualResults;
@@ -35,6 +39,10 @@ export function renderPageBlockTemplate(
   const hasVisualDiffAssets = Boolean(
     vResult?.expectedPath || vResult?.diffPath,
   );
+
+  const functionalFailure = page.status >= 400;
+  const seoFailure = page.seoScore < 100;
+  const a11yFailure = page.a11yErrors > 0;
 
   return `
     <details class="page-accordion">
@@ -50,31 +58,30 @@ export function renderPageBlockTemplate(
       
       <div class="page-details-container">
         <details class="sub-accordion">
-          <summary class="sub-summary functional-summary">
-             <span class="sub-arrow">▶</span> Functional Validation & Component Tests
+          <summary class="sub-summary functional-summary ${functionalFailure ? "issue-summary" : ""}">
+             <span class="sub-arrow">▶</span>Broken Link Test
           </summary>
           <div class="sub-content">
             ${functionalHtml}
             <div class="script-path-box">
               <div class="script-path-title">Generated Test Script Path:</div>
-              <code style="color: #9333ea; font-size: 13px; font-weight: 600;">tests/${page.url.replace(/[^a-z0-9]/gi, "_")}.spec.ts</code>
+              <code style="color: #9333ea; font-size: 13px; font-weight: 600;">tests/mcp/${page.url.replace(/[^a-z0-9]/gi, "_")}.spec.ts</code>
             </div>
           </div>
         </details>
 
         <details class="sub-accordion">
-          <summary class="sub-summary seo-summary">
-             <span class="sub-arrow">▶</span> Technical SEO Engine (${page.seoScore}/100)
+          <summary class="sub-summary seo-summary ${seoFailure ? "issue-summary" : ""}">
+             <span class="sub-arrow">▶</span> SEO Checks (${page.seoScore}/100)
           </summary>
           <div class="sub-content">
             ${seoHtml}
           </div>
         </details>
 
-        <!-- SUB-ACCORDION 3: Accessibility -->
         <details class="sub-accordion">
-          <summary class="sub-summary a11y-summary">
-             <span class="sub-arrow">▶</span> Accessibility (WCAG) Analysis - ${page.a11yErrors} Errors
+          <summary class="sub-summary a11y-summary ${a11yFailure ? "issue-summary" : ""}">
+             <span class="sub-arrow">▶</span> Accessibility (WCAG) Checks - ${page.a11yErrors} Errors
           </summary>
           <div class="sub-content">
             ${page.screenshotPath ? `<a href="./${page.screenshotPath}" target="_blank" class="a11y-tag-btn">🖼️ View Accessibility Heatmap</a>` : ""}
@@ -84,7 +91,7 @@ export function renderPageBlockTemplate(
 
         <details class="sub-accordion">
           <summary class="sub-summary" style="border-left-color: #ec4899;">
-             <span class="sub-arrow">▶</span> Visual Layout Engine (Pixel Diff)
+             <span class="sub-arrow">▶</span> Visual Diff Test
           </summary>
           <div class="sub-content">
             ${
@@ -121,7 +128,7 @@ export function renderPageBlockTemplate(
                   ? `
               <div style="text-align: center; padding: 24px; color: #1d4ed8; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
                 <strong>🆕 Visual Baseline Created</strong><br>
-                <span style="font-size: 13px; color: #1e3a8a;">This page did not have an existing baseline, so the current render was stored as the initial reference.</span>
+                <span style="font-size: 13px; color: #1e3a8a;">This page did not have an existing baseline. Current image is saved as the Baseline.</span>
               </div>
             `
                   : `
@@ -169,10 +176,10 @@ export function generateDashboardHtml(data: DetailedReportData): string {
         .header h1 { margin: 0 0 8px 0; font-size: 28px; font-weight: 800; color: #1e293b; }
         .header p { margin: 0; color: var(--text-muted); font-size: 14px; font-weight: 500; }
         
-        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 40px; }
-        .metric-card { background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); padding: 24px; border-radius: 18px; border: 1px solid rgba(148, 163, 184, 0.18); text-align: center; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06); min-height: 150px; }
-        .metric-value { font-size: 2.4rem; font-weight: 800; margin: 8px 0; color: var(--text); }
-        .metric-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 40px; }
+        .metric-card { background: #f3f4f6; padding: 18px 18px 16px; border-radius: 16px; border: 1px solid rgba(148, 163, 184, 0.14); text-align: center; box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08); min-height: 120px; }
+        .metric-value { font-size: 2rem; font-weight: 800; margin: 6px 0; color: var(--text); }
+        .metric-label { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.6px; margin-bottom: 8px; }
 
         .charts-container { display: grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 24px; margin-bottom: 40px; }
         .chart-box { background: #ffffff; border: 1px solid rgba(148, 163, 184, 0.14); border-radius: 18px; padding: 22px 20px 18px; box-shadow: 0 16px 35px rgba(15, 23, 42, 0.06); display: flex; flex-direction: column; align-items: stretch; min-height: 330px; }
@@ -197,6 +204,8 @@ export function generateDashboardHtml(data: DetailedReportData): string {
         .functional-summary { border-left-color: var(--accent); }
         .seo-summary { border-left-color: var(--warning); }
         .a11y-summary { border-left-color: var(--success); }
+        .issue-summary { background: #fee2e2; border-color: #fca5a5 !important; }
+        .issue-summary .sub-arrow { color: #991b1b; }
         .sub-content { padding: 16px; background: #ffffff; border-top: 1px solid var(--border); }
         .sub-accordion .seo-summary + .sub-content,
         .sub-accordion .a11y-summary + .sub-content {
@@ -233,33 +242,37 @@ export function generateDashboardHtml(data: DetailedReportData): string {
         pre { position: relative; background: #1e293b; color: #f8fafc; padding: 16px; border-radius: 6px; overflow-x: auto; font-size: 13px; }
         .copy-btn { position: absolute; top: 8px; right: 8px; background: #334155; border: 1px solid #475569; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 600; transition: background 0.2s; }
         .copy-btn:hover { background: #475569; }
+        .link-copy-row { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+        .link-copy-link { color: var(--accent); font-weight: 700; text-decoration: underline; }
+        .link-copy-btn { background: #2563eb; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: 700; transition: background 0.2s; }
+        .link-copy-btn:hover { background: #1d4ed8; }
       </style>
     </head>
     <body>
       <div class="dashboard-container">
         <div class="header">
           <div>
-            <h1>Autonomous Test Generation Matrix</h1>
-            <p>Target Environment: <strong style="color: var(--text);">${data.targetUrl}</strong> | Emulation Mode: <strong style="color: var(--accent); text-transform: uppercase;">${data.deviceMode}</strong> | Run ID: <strong style="font-family: monospace;">${data.runId}</strong></p>
+            <h1>Page Report</h1>
+            <p>Site : <strong style="color: var(--text);">${data.targetUrl}</strong> | Device Layout : <strong style="color: var(--accent); text-transform: uppercase;">${data.deviceMode}</strong> | Run ID: <strong style="font-family: monospace;">${data.runId}</strong></p>
           </div>
           <a href="index.html" style="color: var(--accent); text-decoration: none; font-weight: 600; font-size: 14px;">← Return to History Hub</a>
         </div>
 
         <div class="metrics-grid">
           <div class="metric-card">
-            <div class="metric-label">Pages Discovered</div>
+            <div class="metric-label">Total Pages</div>
             <div class="metric-value">${totalPages}</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">Functional Pages</div>
+            <div class="metric-label">Working Pages</div>
             <div class="metric-value" style="color: var(--success);">${functionalPages}</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">Broken / Errors</div>
+            <div class="metric-label">Broken Pages</div>
             <div class="metric-value" style="color: var(--danger);">${brokenPages}</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">A11y Violations</div>
+            <div class="metric-label">Total A11y Violations</div>
             <div class="metric-value" style="color: ${data.a11yViolationCount > 0 ? "var(--warning)" : "var(--success)"};">${data.a11yViolationCount}</div>
           </div>
         </div>
@@ -267,7 +280,7 @@ export function generateDashboardHtml(data: DetailedReportData): string {
         <!-- ANALYTICS CHARTS SECTION -->
         <div class="charts-container">
           <div class="chart-box">
-            <h3>Site Health Ratio</h3>
+            <h3>Pages Status</h3>
             <div class="canvas-wrapper">
               <canvas id="healthChart"></canvas>
             </div>
@@ -280,7 +293,7 @@ export function generateDashboardHtml(data: DetailedReportData): string {
           </div>
         </div>
 
-        <h3 style="font-size: 16px; color: var(--text); margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 8px;">Granular Page Diagnostics</h3>
+        <h3 style="font-size: 16px; color: var(--text); margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 8px;">Page-Wise Details</h3>
         
         ${data.pages.map((page) => renderPageBlockTemplate(page, data.runId, data.playwrightReportPath)).join("")}
       </div>
@@ -293,10 +306,8 @@ export function generateDashboardHtml(data: DetailedReportData): string {
           new Chart(healthCtx, {
             type: 'doughnut',
             data: {
-              // 🔥 FIX: Labels updated here
-              labels: ['Functional Pages', 'Broken/Error Pages'],
+              labels: ['Working Pages', 'Broken/Error Pages'],
               datasets: [{
-                // 🔥 FIX: Passed correct variables into Chart.js array
                 data: [${functionalPages}, ${brokenPages}],
                 backgroundColor: ['#16a34a', '#dc2626'],
                 borderWidth: 0
@@ -369,6 +380,19 @@ export function generateDashboardHtml(data: DetailedReportData): string {
             });
           };
           pre.prepend(btn);
+        });
+
+        document.querySelectorAll('.link-copy-btn').forEach((button) => {
+          button.addEventListener('click', () => {
+            const copyText = button.getAttribute('data-copy-text') || '';
+            navigator.clipboard.writeText(copyText).then(() => {
+              const previousText = button.textContent;
+              button.textContent = 'Copied!';
+              setTimeout(() => {
+                button.textContent = previousText;
+              }, 2000);
+            });
+          });
         });
       </script>
     </body>
