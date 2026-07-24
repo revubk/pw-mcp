@@ -105,20 +105,17 @@ export async function executeAutonomousMcpAgent(
 
     const testFileContent = `import { test, expect } from '@playwright/test';
 
-test('Test url: ${url}', async ({ page }) => {
+test('Autonomous Element Validation — Route: ${url}', async ({ page }) => {
   await page.goto('${url}', { waitUntil: 'networkidle' });
   
+  // AI Generated Element-by-Element Validation Tests based on Verified Schema
   ${cleanedStatements}
 });
 `;
 
     const safeFilename = url.replace(/[^a-z0-9]/gi, "_").toLowerCase();
-    const testsDir = path.join(
-      process.cwd(),
-      "tests",
-      new URL(url).hostname.replace(/[^a-z0-9]/gi, "_"),
-    );
 
+    const testsDir = path.join(process.cwd(), "tests", "mcp");
     if (!fs.existsSync(testsDir)) {
       fs.mkdirSync(testsDir, { recursive: true });
     }

@@ -13,7 +13,6 @@ import { executeParallelAudits } from "./pipeline/taskRunner";
 import { backfillIncompletePages } from "./pipeline/dataBackfill";
 import { injectVisualColorsChart } from "./pipeline/canvasInject";
 import { executeAutonomousMcpAgent } from "./pipeline/mcpClient";
-import { runVisualAudit } from "../auditors/visual";
 
 export async function executeSiteAudit(
   targetSite: string,
@@ -104,10 +103,6 @@ export async function executeSiteAudit(
                 `   💾 Automated test compiled and saved cleanly to: ${activeScriptFile}`,
               );
             }
-          }
-
-          if (scanVisual) {
-            visualResults = await runVisualAudit(page, url, reportDir);
           }
 
           if (scanA11y && a11yErrorsOnPage > 0) {
@@ -204,15 +199,18 @@ export async function executeSiteAudit(
   console.log("\n📸 Firing Playwright Native Visual Regression Suite...");
   let playwrightPassed = true;
   try {
-    execSync("npx playwright test tests/visual.spec.ts --reporter=html", {
-      stdio: "inherit",
-      timeout: 300000,
-      env: {
-        ...process.env,
-        CI: "true",
-        DEVICE_MODE: deviceMode,
+    execSync(
+      "npx playwright test tests/visual/visual.spec.ts --reporter=html",
+      {
+        stdio: "inherit",
+        timeout: 300000,
+        env: {
+          ...process.env,
+          CI: "true",
+          DEVICE_MODE: deviceMode,
+        },
       },
-    });
+    );
     console.log("   ✅ Visual Engine complete. No layout shifts detected.");
   } catch (e) {
     playwrightPassed = false;
@@ -229,33 +227,6 @@ export async function executeSiteAudit(
       console.warn("Could not parse visual_bridge.json");
     }
   }
-
-  // 3. Update the Knowledge Ledger based on run results
-  const ledgerPath = path.join(reportsGlobalDir, "knowledge_ledger.json");
-  let knowledgeLedger: Record<string, string> = {};
-  if (fs.existsSync(ledgerPath)) {
-    try {
-      knowledgeLedger = JSON.parse(fs.readFileSync(ledgerPath, "utf8"));
-    } catch (err) {}
-  }
-
-  structuredPagesList.forEach((page) => {
-    const vMatch = visualData.find((v) => v.url === page.url);
-    if (vMatch && vMatch.status === "failed") {
-      knowledgeLedger[page.url] =
-        "Warning: Visual layout shift or interaction failure detected on previous run. Adjust selectors or verify element stability.";
-    } else {
-      knowledgeLedger[page.url] =
-        "Verified: Page structure and visual baselines stable on last execution.";
-    }
-  });
-
-  fs.writeFileSync(
-    ledgerPath,
-    JSON.stringify(knowledgeLedger, null, 2),
-    "utf8",
-  );
-  console.log(`   📝 Knowledge ledger updated successfully at: ${ledgerPath}`);
 
   // 4. Merge visual results into main page objects
   const finalPagesWithVisuals = structuredPagesList.map((page) => {

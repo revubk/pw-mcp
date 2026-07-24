@@ -5,7 +5,7 @@ import * as path from "path";
 export default defineConfig({
   testDir: "tests",
 
-  testMatch: "**/*.*.ts",
+  testMatch: "**/*.{spec,test}.ts",
 
   timeout: 30 * 1000,
 
