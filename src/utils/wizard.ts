@@ -1,16 +1,27 @@
 import inquirer from "inquirer";
 import { DeviceFormFactor, WizardAnswers } from "../types/audit";
 
-/**
- * Core Interactive Selection Wizard Prompt.
- * Gathers target application endpoints, browser visibility modes, and device emulation criteria.
- */
 export async function runTerminalWizard(): Promise<WizardAnswers> {
   console.log("==================================================");
   console.log("       Welcome to the Site Auditor Crawler        ");
   console.log("==================================================\n");
 
   const envUrl = process.env.TARGET_URL || "https://example.com";
+
+  if (process.env.CI === 'true') {
+    console.log(`🤖 [CI Mode] Bypassing interactive prompt. Using Target URL: ${envUrl}`);
+    
+    return {
+      finalUrl: envUrl,
+      runA11y: true,
+      runSeo: true,
+      runVisual: true,
+      isHeadless: true,
+      chosenDevice: (process.env.DEVICE_MODE as DeviceFormFactor) || "desktop",
+      pageCap: 15,
+      runMcpAgent: true,
+    };
+  }
 
   const answers = await inquirer.prompt([
     {
@@ -96,7 +107,6 @@ export async function runTerminalWizard(): Promise<WizardAnswers> {
         return true;
       },
     },
-    // Look for the auditTiers block inside your src/utils/wizard.ts file and modify it exactly like this:
     {
       type: "checkbox",
       name: "auditTiers",
@@ -121,7 +131,7 @@ export async function runTerminalWizard(): Promise<WizardAnswers> {
           name: "Visual AI Layout Verification Tiers (Applitools P2)",
           value: "VISUAL",
           checked: true,
-        }, // 🔥 NEW OPTION ROW
+        },
       ],
     },
     {
@@ -139,7 +149,7 @@ export async function runTerminalWizard(): Promise<WizardAnswers> {
   const runVisual = answers.auditTiers.includes("VISUAL");
   const isHeadless = answers.browserMode;
   const chosenDevice = answers.deviceFormFactor as DeviceFormFactor;
-
+  
   let pageCap = 15;
   if (answers.capProfile === "ALL") {
     pageCap = 99999;
