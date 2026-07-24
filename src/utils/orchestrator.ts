@@ -242,6 +242,14 @@ export async function executeSiteAudit(
   });
 
   // 5. Build the final report payload
+  const playwrightReportIndexPath = path.join(process.cwd(), "playwright-report", "index.html");
+  const playwrightReportRelativePath = fs.existsSync(playwrightReportIndexPath)
+    ? path
+        .relative(reportDir, playwrightReportIndexPath)
+        .split(path.sep)
+        .join("/")
+    : null;
+
   const finalReportData: DetailedReportData = {
     runId: runId,
     targetUrl: targetSite,
@@ -251,6 +259,7 @@ export async function executeSiteAudit(
     a11yViolationCount: aggregateA11yIssues,
     pages: finalPagesWithVisuals,
     incompletePages: crawler.queue,
+    playwrightReportPath: playwrightReportRelativePath,
   };
 
   // 6. Generate the HTML report & save to the specific host directory

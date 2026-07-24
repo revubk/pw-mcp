@@ -6,6 +6,7 @@ import { compileSeoDrawerHtml } from "./components/seoDrawer";
 export function renderPageBlockTemplate(
   page: PageAuditResult,
   runId: string,
+  playwrightReportPath?: string | null,
 ): string {
   const isBroken = page.status >= 400;
   const statusColor = isBroken ? "var(--danger)" : "var(--success)";
@@ -91,11 +92,11 @@ export function renderPageBlockTemplate(
                   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px;">
                     <div>
                       <div style="font-weight: bold; font-size: 12px; margin-bottom: 8px; color: #475569;">BASELINE (EXPECTED)</div>
-                      <img src="../../${vResult.expectedPath}" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 4px;" alt="Baseline">
+                      <img src="../${vResult.expectedPath}" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 4px;" alt="Baseline">
                     </div>
                     <div>
                       <div style="font-weight: bold; font-size: 12px; margin-bottom: 8px; color: #be185d;">ACTUAL (PINK = CHANGES)</div>
-                      <img src="../../${vResult.diffPath}" style="width: 100%; border: 1px solid #f472b6; border-radius: 4px; filter: hue-rotate(310deg) saturate(1.5);" alt="Diff">
+                      <img src="../${vResult.diffPath}" style="width: 100%; border: 1px solid #f472b6; border-radius: 4px; filter: hue-rotate(310deg) saturate(1.5);" alt="Diff">
                     </div>
                   </div>
                 `
@@ -211,6 +212,7 @@ export function generateDashboardHtml(data: DetailedReportData): string {
           <div>
             <h1>Autonomous Test Generation Matrix</h1>
             <p>Target Environment: <strong style="color: var(--text);">${data.targetUrl}</strong> | Emulation Mode: <strong style="color: var(--accent); text-transform: uppercase;">${data.deviceMode}</strong> | Run ID: <strong style="font-family: monospace;">${data.runId}</strong></p>
+            ${data.playwrightReportPath ? `<p style="margin: 8px 0 0 0; font-size: 13px;"><a href="${data.playwrightReportPath}" style="color: var(--accent); font-weight: 600;">View Native Playwright Visual Report</a></p>` : ""}
           </div>
           <a href="index.html" style="color: var(--accent); text-decoration: none; font-weight: 600; font-size: 14px;">← Return to History Hub</a>
         </div>
@@ -252,7 +254,7 @@ export function generateDashboardHtml(data: DetailedReportData): string {
 
         <h3 style="font-size: 16px; color: var(--text); margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 8px;">Granular Page Diagnostics</h3>
         
-        ${data.pages.map((page) => renderPageBlockTemplate(page, data.runId)).join("")}
+        ${data.pages.map((page) => renderPageBlockTemplate(page, data.runId, data.playwrightReportPath)).join("")}
       </div>
 
       <button id="backToTop" title="Go to top">↑</button>

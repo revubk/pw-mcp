@@ -63,7 +63,7 @@ export async function executeAutonomousMcpAgent(
 
   const constrainedSystemPrompt = `${blueprintPrompt}
 
-  CRITICAL INSTRUCTION: You are provided with a JSON list of VERIFIED elements currently in the DOM. You are forbidden from targeting any element NOT on this list. For each interactive element (button, input, link) found in the schema, write an individual Playwright 'expect(page.locator(...)).toBeVisible();' test. Do not chain interactions; write independent validation tests for each element.`;
+  CRITICAL INSTRUCTION: You are provided with a JSON list of VERIFIED elements currently in the DOM. You are forbidden from targeting any element NOT on this list. Generate a compact smoke-suite for the page rather than a random selector dump. Prefer accessible locators such as getByRole, getByLabel, getByPlaceholder, and getByText. For generic pages, verify a visible heading, one meaningful link or button, and one content section. If a form exists, verify the field and submit action in a simple realistic flow. Avoid brittle CSS class selectors unless no better option exists. Output only raw Playwright statements that are stable and useful for functional, UI, and accessibility smoke coverage.`;
 
   const userPayload = `Target URL: ${url}
   

@@ -1,0 +1,60 @@
+name: Production Deployment Crawler
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: 'Target URL to crawl (Overrides .env)'
+        required: true
+        default: 'https://lbb.in/'
+      device_mode:
+        description: 'Device Emulation Mode'
+        required: true
+        default: 'desktop'
+        type: choice
+        options:
+          - desktop
+          - mobile
+          - tablet
+
+  deployment_status:
+
+jobs:
+  autonomous-audit:
+    if: github.event_name == 'workflow_dispatch' || github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Playwright & Dependencies
+        run: npx playwright install --with-deps chromium
+
+      - name: Execute Autonomous Crawler Pipeline
+        run: npm run start
+        env:
+          TARGET_URL: ${{ inputs.target_url || github.event.deployment_status.target_url || 'https://lbb.in/' }}
+          DEVICE_MODE: ${{ inputs.device_mode || 'desktop' }}
+          CI: 'true'
+          
+          LM_STUDIO_URL: ${{ secrets.PROD_LLM_URL || 'http://localhost:1234/v1/chat/completions' }}
+
+      - name: Upload Audit Dashboard & Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: autonomous-deployment-report-${{ github.run_id }}
+          path: |
+            reports/
+            test-results/
+          retention-days: 14

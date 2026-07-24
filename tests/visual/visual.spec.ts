@@ -53,7 +53,12 @@ test.afterEach(async ({}, testInfo) => {
 
   const isNewBaseline =
     testInfo.error?.message?.includes("A snapshot doesn't exist") ||
-    testInfo.error?.message?.includes("A snapshot doesn't exist at");
+    testInfo.error?.message?.includes("A snapshot doesn't exist at") ||
+    testInfo.annotations.some(
+      (annotation) =>
+        annotation.type === "visual-baseline" &&
+        annotation.description === "created",
+    );
 
   const expected = testInfo.attachments.find((a) =>
     a.name.includes("expected"),
@@ -93,7 +98,7 @@ test.afterAll(() => {
 
 test.describe(`Autonomous Visual Regression Suite (${device.name.toUpperCase()})`, () => {
   for (const url of TARGET_URLS) {
-    test(`Visual Diff: ${url} on${device.name}`, async ({ page }) => {
+    test(`Visual Diff: ${url} on${device.name}`, async ({ page }, testInfo) => {
       await page.setViewportSize({
         width: device.width,
         height: device.height,
@@ -102,14 +107,46 @@ test.describe(`Autonomous Visual Regression Suite (${device.name.toUpperCase()})
 
       const safeName = url.replace(/[^a-z0-9]/gi, "_").substring(0, 60);
       const snapshotName = `${safeName}-${device.name}.png`;
+      const snapshotPath = path.join(
+        process.cwd(),
+        "reports",
+        "baselines",
+        "visual.spec.ts-snapshots",
+        snapshotName,
+      );
 
-      await expect(
-        page,
-        `Visual diff should not be found for ${snapshotName}`,
-      ).toHaveScreenshot(snapshotName, {
-        fullPage: true,
-        timeout: 15000,
-      });
+      try {
+        await expect(
+          page,
+          `Visual diff should not be found for ${snapshotName}`,
+        ).toHaveScreenshot(snapshotName, {
+          fullPage: true,
+          timeout: 15000,
+        });
+      } catch (error: any) {
+        const isMissingBaseline =
+          error?.message?.includes("A snapshot doesn't exist") ||
+          error?.message?.includes("A snapshot doesn't exist at");
+
+        if (isMissingBaseline) {
+          if (!fs.existsSync(path.dirname(snapshotPath))) {
+            fs.mkdirSync(path.dirname(snapshotPath), { recursive: true });
+          }
+          await page.screenshot({
+            path: snapshotPath,
+            fullPage: true,
+            animations: "disabled",
+          });
+          testInfo.annotations.push({
+            type: "visual-baseline",
+            description: "created",
+          });
+          console.log(`🆕 [Visual Engine] Created baseline for ${snapshotName}`);
+          return;
+        }
+
+        throw error;
+      }
     });
   }
 });

@@ -1,5 +1,5 @@
 ================================================================================
-ADVANCED PLAYWRIGHT TEST GENERATION RULES — COMPREHENSIVE COVERAGE EDITION
+ADVANCED PLAYWRIGHT TEST GENERATION RULES — GENERIC PAGE SMOKE EDITION
 ================================================================================
 You are generating ONLY the interaction lines for a Playwright test() block.
 The test wrapper, imports, goto(), and page setup already exist.
@@ -13,7 +13,7 @@ The test wrapper, imports, goto(), and page setup already exist.
 - NO import statements, NO test()/describe() wrappers, NO page.goto() calls.
 
 ═══════════════════════════════════════════════════════════════════════════════
-2. MODERN LOCATOR PRIORITY (USER-CENTRIC APPROACH)
+2. LOCATOR PRIORITY — STABLE AND ACCESSIBLE
 ═══════════════════════════════════════════════════════════════════════════════
 ALWAYS prefer user-facing locators. CSS selectors are a last resort.
 
@@ -42,140 +42,78 @@ DO NOT fall back to bare CSS selectors (.class-name, div > p) unless absolutely
 necessary, and only if the element has no accessible attributes.
 
 ═══════════════════════════════════════════════════════════════════════════════
-3. WORKFLOW DESIGN — REALISTIC USER JOURNEYS (CRITICAL)
+3. WORKFLOW DESIGN — GENERIC PAGE SMOKE TESTS
 ═══════════════════════════════════════════════════════════════════════════════
-Analyze page metadata (title, URL, heading, description) to infer the PRIMARY
-BUSINESS INTENT. Then construct a coherent, multi-step user journey that:
+Infer the page intent from the URL, title, visible text, and the provided schema. Then generate a compact smoke test that is realistic for that page type.
 
-A. IDENTIFIES PAGE TYPE:
-   - Login/Auth page? → Fill credentials, submit, verify redirect or auth state.
-   - Search page? → Enter query, click search, verify results appear.
-   - Product listing? → Browse items, apply filters, verify filtered output.
-   - Form/Survey? → Fill multiple fields, validate error states, submit.
-   - Checkout? → Add items, fill shipping, select payment, verify order summary.
-   - Dashboard? → Log in, verify data loads, interact with key widgets.
+GOOD PATTERNS:
+- Home or content page: verify a primary heading, one prominent link/button, and one content section.
+- Search/listing page: enter a relevant query, click search, verify results appear.
+- Form page: fill a realistic value, submit, verify success or validation message.
+- Commerce page: verify a product card or CTA and one primary action.
+- Dashboard/page with navigation: verify a main heading and a key nav link or widget.
 
-B. MULTI-STEP INTERACTIONS (Not just one action):
-   ✓ Good: Fill email → Fill password → Click login → Wait for dashboard
-   ✗ Bad: Click one button → Done
+AVOID:
+- Generic "click random button" flows.
+- Overly deep multi-step journeys that are unlikely to be stable.
+- Assertions that only check that the page loaded.
 
-C. DATA ENTRY WITH REALISTIC VALUES:
-   - Search: MUST be contextually relevant to the site (e.g., infer from headings or meta tags). Do not use generic tech terms unless it is a tech site.
-   - Email: 'testuser@example.com'
-   - Phone: '555-123-4567'
-
-D. CONDITIONAL INTERACTIONS:
-   - If form has validation: enter invalid data first, verify error, then valid data.
-   - If page has tabs/accordion: click to expand, verify content appears.
-   - If dropdown exists: open it, select option, verify selection reflected.
-   - If pagination exists: navigate pages, verify content changes.
+DATA VALUES:
+- Use contextual values relevant to the site.
+- For search: use a meaningful query from the page content.
+- For forms: use 'testuser@example.com' or 'SecurePass123!'.
 
 ═══════════════════════════════════════════════════════════════════════════════
-4. ASSERTION STRATEGY — OUTCOME VERIFICATION (MANDATORY)
+4. ASSERTION STRATEGY — BASIC FUNCTIONAL, UI, AND A11Y-SAFE CHECKS
 ═══════════════════════════════════════════════════════════════════════════════
-Tests MUST verify that the workflow succeeded. Use MULTIPLE assertions targeting
-different aspects of the outcome:
+Generate 1-3 meaningful assertions that prove the page is usable.
 
-TYPE A — State Change Assertion (Most Important):
-  After a primary action, verify the UI changed in a way that proves success:
-  - await expect(page.getByRole('heading', { name: 'Results' })).toBeVisible();
-  - await expect(page.locator('[data-testid="success-message"]')).toContainText('Order placed');
-  - await expect(page.getByRole('link', { name: 'My Orders' })).toBeVisible();
+PREFERRED ASSERTIONS:
+- await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+- await expect(page.getByRole('link', { name: /something/i })).toBeVisible();
+- await expect(page.getByText(/expected content/i)).toBeVisible();
+- await expect(page.getByRole('button', { name: /submit|search|continue/i })).toBeVisible();
+- await expect(page).toHaveURL(/expected-route/);
 
-TYPE B — URL/Navigation Assertion:
-  Verify the page navigated to expected route:
-  - await expect(page).toHaveURL(/\/dashboard/);
-  - expect(page.url()).toContain('order-confirmed');
-
-TYPE C — Element Count/Existence Assertion:
-  Verify expected number of results, items, or form fields:
-  - await expect(page.locator('[data-testid="result-item"]')).toHaveCount(5);
-  - await expect(page.getByRole('listitem')).toBeTruthy();
-
-TYPE D — Text/Content Assertion:
-  Verify expected text appears (not just visibility):
-  - await expect(page.getByRole('status')).toContainText('Success');
-  - await expect(page.getByText(/Order/)).toBeVisible();
-
-TYPE E — Form/Input State Assertion:
-  Verify form state after submission:
-  - await expect(page.getByPlaceholder('Email')).toHaveValue('');
-  - await expect(page.getByRole('button', { name: 'Submit' })).toBeDisabled();
-
-PICK 1-3 COMPLEMENTARY ASSERTIONS that together prove the workflow succeeded.
-NOT just "page is truthy" or "body is visible" — those are useless.
+If a form exists, also verify the field and submit button are present and usable.
+If a link/button exists, prefer verifying it is visible and clickable with a meaningful name.
 
 ═══════════════════════════════════════════════════════════════════════════════
-5. INTERACTION PATTERNS — COVER REALISTIC USER BEHAVIORS
+5. INTERACTION PATTERNS — REALISTIC AND SAFE
 ═══════════════════════════════════════════════════════════════════════════════
-(NOTE: The following are structural patterns ONLY. You MUST adapt the locators and data strictly to the elements present in the provided schema. Do not hallucinate fields.)
+Use simple, stable interactions only.
 
-Form Submission Flow:
-  await page.getByLabel('Email').fill('test@example.com');
-  await page.getByLabel('Password').fill('SecurePass123!');
-  await page.getByRole('button', { name: 'Login' }).click();
-  await expect(page).toHaveURL(/\/dashboard/);
+Examples:
+- await page.getByRole('link', { name: /about|contact|learn more/i }).click();
+- await page.getByRole('button', { name: /search|submit|continue/i }).click();
+- await page.getByLabel(/email/i).fill('testuser@example.com');
+- await page.getByPlaceholder(/search/i).fill('dresses');
 
-Search & Filter Flow:
-  await page.getByPlaceholder('Search').fill('laptop');
-  await page.getByRole('button', { name: 'Search' }).click();
-  await expect(page.locator('[data-testid="result"]')).toHaveCount(1);
-
-Dropdown Selection Flow:
-  await page.getByRole('combobox', { name: 'Category' }).click();
-  await page.getByRole('option', { name: 'Electronics' }).click();
-  await expect(page.getByText('Electronics')).toBeVisible();
-
-Tab Navigation Flow:
-  await page.getByRole('tab', { name: 'Reviews' }).click();
-  await expect(page.getByRole('heading', { name: 'Customer Reviews' })).toBeVisible();
-
-Pagination Flow:
-  await page.getByRole('button', { name: 'Next' }).click();
-  await expect(page).toHaveURL(/page=2/);
-  await expect(page.locator('[data-testid="result"]').first()).toBeVisible();
-
-Error Handling Flow:
-  await page.getByLabel('Email').fill('invalid-email');
-  await page.getByRole('button', { name: 'Submit' }).click();
-  await expect(page.getByText(/invalid email/i)).toBeVisible();
-  await page.getByLabel('Email').clear();
-  await page.getByLabel('Email').fill('valid@example.com');
-  await page.getByRole('button', { name: 'Submit' }).click();
-  await expect(page).toHaveURL(/success/);
+After an interaction, verify an expected result such as navigation, a visible heading, or a success message.
 
 ═══════════════════════════════════════════════════════════════════════════════
 6. LIMITS & CONSTRAINTS
 ═══════════════════════════════════════════════════════════════════════════════
-- GENERATE UP TO 10 STATEMENTS MAXIMUM (Aim for 4-8 based on schema size. Do NOT invent actions to hit a quota).
-- INCLUDE 1-3 ASSERTIONS depending on workflow complexity.
-- ONE-LINE COMMENT explaining the workflow intent (e.g., "// Complete login flow").
-- If schema is empty or has <2 interactive elements, output NOTHING.
-- NEVER include conditional logic (if/else) — assume elements exist and interact.
-- NEVER use page.click() without context — always use getByRole/getByLabel/etc.
+- GENERATE UP TO 8 STATEMENTS MAXIMUM.
+- INCLUDE 1-3 ASSERTIONS.
+- ONE-LINE COMMENT explaining the workflow intent is allowed.
+- If schema is empty or has <2 meaningful elements, output a small smoke assertion only.
+- NEVER use conditional logic (if/else).
+- NEVER invent labels or selectors that are not in the provided schema.
+- NEVER rely on CSS classes for main assertions when an accessible locator is available.
 
 ═══════════════════════════════════════════════════════════════════════════════
-7. QUALITY CHECKLIST (Self-Validate)
+7. QUALITY CHECKLIST
 ═══════════════════════════════════════════════════════════════════════════════
 Before outputting, ask yourself:
-  ✓ Does this test follow a realistic user workflow (not just random clicks)?
-  ✓ Is every locator from the TIER 1-3 list, NOT bare CSS?
-  ✓ Are there 1-3 meaningful assertions that prove success?
-  ✓ Would a QA engineer recognize this as a valid test?
-  ✓ Could this test catch real bugs (not just "page loads")?
-  ✓ Is all dummy data realistic and domain-appropriate?
+  ✓ Is this a stable smoke test rather than a brittle selector dump?
+  ✓ Does it use accessible locators when available?
+  ✓ Does it verify something meaningful for a generic page?
+  ✓ Would a QA engineer consider this useful?
+  ✓ Does it avoid obvious false positives?
 
 ═══════════════════════════════════════════════════════════════════════════════
-8. SCHEMA GROUNDING (MANDATORY COMPLIANCE)
+8. SCHEMA GROUNDING
 ═══════════════════════════════════════════════════════════════════════════════
 You will receive a JSON schema of page elements. YOU MUST ONLY interact with
-elements from this schema. Do not invent selectors, labels, or IDs that are
-not explicitly listed. If a desired interaction cannot be fulfilled with the
-provided schema, skip that step.
-
-Example:
-  Schema includes: { tagName: 'input', placeholder: 'Email', name: 'email_field' }
-  → Use: await page.getByPlaceholder('Email').fill(...) OR page.locator('[name="email_field"]')
-  
-  Schema does NOT include a "Submit" button:
-  → Do not invent it. Work with what exists.
+those elements. If the schema does not expose a clear form or action, prefer verifying visible content and navigation links instead of inventing interactions.

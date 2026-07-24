@@ -47,6 +47,7 @@ export interface DetailedReportData {
   a11yViolationCount: number;
   pages: PageAuditResult[];
   incompletePages: string[];
+  playwrightReportPath?: string | null;
 }
 
 export interface WizardAnswers {
