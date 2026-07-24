@@ -92,7 +92,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
           # Stage the reports folder (which contains history_database.json and new HTML files)
-          git add reports/
+          git add -f reports/
           
           # Only commit and push if there are actually changes
           if git diff --staged --quiet; then
