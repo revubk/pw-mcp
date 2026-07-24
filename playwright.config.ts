@@ -11,11 +11,13 @@ export default defineConfig({
 
   updateSnapshots: "missing",
 
-  snapshotDir: path.join(process.cwd(), "reports", "baselines"),
+  snapshotDir: "reports/baselines",
 
   expect: {
     toHaveScreenshot: {
-      pathTemplate: "{snapshotDir}/{arg}-{ext}",
+      maxDiffPixelRatio: 0.02,
+      animations: "disabled",
+      pathTemplate: "reports/baselines/{testFileName}-snapshots/{arg}.png",
     },
   },
 

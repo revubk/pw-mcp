@@ -30,10 +30,9 @@ function getTargetUrls(): string[] {
       console.warn("⚠️ [Visual Engine] Failed to parse last_crawled_urls.json");
     }
   }
-  return []; // Return empty if no crawl data exists
+  return [];
 }
 
-// 2. STRICT Device Configuration (No more all layouts)
 function getDeviceConfig() {
   const mode = (process.env.DEVICE_MODE || "desktop").toLowerCase();
 
@@ -87,10 +86,6 @@ test.afterAll(() => {
   console.log(`   💾 Visual bridge data saved to: ${BRIDGE_FILE_PATH}`);
 });
 
-console.log(
-  `📸 [Visual Engine] Running suite for ${TARGET_URLS.length} page(s) using [${device.name.toUpperCase()}] viewport.`,
-);
-
 test.describe(`Autonomous Visual Regression Suite (${device.name.toUpperCase()})`, () => {
   for (const url of TARGET_URLS) {
     test(`Visual Diff: ${url} on${device.name}`, async ({ page }) => {
@@ -103,10 +98,11 @@ test.describe(`Autonomous Visual Regression Suite (${device.name.toUpperCase()})
       const safeName = url.replace(/[^a-z0-9]/gi, "_").substring(0, 60);
       const snapshotName = `${safeName}-${device.name}.png`;
 
-      await expect(page).toHaveScreenshot(snapshotName, {
-        maxDiffPixelRatio: 0.02,
+      await expect(
+        page,
+        `Visual diff should not be found for ${snapshotName}`,
+      ).toHaveScreenshot(snapshotName, {
         fullPage: true,
-        animations: "disabled",
         timeout: 15000,
       });
     });

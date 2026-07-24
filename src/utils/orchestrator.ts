@@ -75,7 +75,11 @@ export async function executeSiteAudit(
         let pageSeoDetails: string[] = [];
         let pageSeoPassDetails: string[] = [];
         let screenshotPath: string | undefined = undefined;
-        let visualResults: any[] = [];
+        let visualResults: {
+          status: "passed" | "failed";
+          expectedPath?: string | null;
+          diffPath?: string | null;
+        } = { status: "passed" };
 
         if (statusCode < 400) {
           const audits = await executeParallelAudits(

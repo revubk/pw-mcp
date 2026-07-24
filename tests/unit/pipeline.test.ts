@@ -5,7 +5,7 @@ import * as path from "path";
 
 test.describe("Core Pipeline Unit Tests", () => {
   test("Crawler should initialize correctly without crashing", () => {
-    const target = "https://lbb.in/";
+    const target = process.env.TARGET_URLS || "https://lbb.in/";
     const crawler = new WebCrawler(target);
 
     // Test the public interface rather than private internal variables

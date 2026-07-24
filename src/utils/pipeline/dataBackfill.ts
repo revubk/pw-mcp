@@ -30,6 +30,7 @@ export function backfillIncompletePages(
                 "Functional Error: Route map dropped before validation tasks finished.",
               ],
         seoPassDetails: wasInterrupted ? (undefined as any) : [],
+        visualResults: { status: "passed" },
       });
     } else {
       activeMatch.screenshotPath = crawledPage.screenshotPath;

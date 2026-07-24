@@ -106,9 +106,7 @@ export function renderPageBlockTemplate(
 
 export function generateDashboardHtml(data: DetailedReportData): string {
   const totalPages = data.pages.length;
-  const passedPages = data.pages.filter(
-    (p) => p.status < 400 && p.a11yErrors === 0,
-  ).length;
+  const functionalPages = data.pages.filter((p) => p.status < 400).length;
   const brokenPages = data.pages.filter((p) => p.status >= 400).length;
 
   return `
@@ -199,8 +197,8 @@ export function generateDashboardHtml(data: DetailedReportData): string {
             <div class="metric-value">${totalPages}</div>
           </div>
           <div class="metric-card">
-            <div class="metric-label">Healthy Pages</div>
-            <div class="metric-value" style="color: var(--success);">${passedPages}</div>
+            <div class="metric-label">Functional Pages</div>
+            <div class="metric-value" style="color: var(--success);">${functionalPages}</div>
           </div>
           <div class="metric-card">
             <div class="metric-label">Broken / Errors</div>
@@ -241,9 +239,11 @@ export function generateDashboardHtml(data: DetailedReportData): string {
           new Chart(healthCtx, {
             type: 'doughnut',
             data: {
-              labels: ['Healthy Pages', 'Broken/Error Pages'],
+              // 🔥 FIX: Labels updated here
+              labels: ['Functional Pages', 'Broken/Error Pages'],
               datasets: [{
-                data: [${passedPages}, ${brokenPages}],
+                // 🔥 FIX: Passed correct variables into Chart.js array
+                data: [${functionalPages}, ${brokenPages}],
                 backgroundColor: ['#16a34a', '#dc2626'],
                 borderWidth: 0
               }]
