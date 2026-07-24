@@ -1,5 +1,16 @@
 [
   {
+    "runId": "28ZV6",
+    "timestamp": "7/24/2026, 1:19:57 PM",
+    "targetUrl": "https://lbb.in/",
+    "deviceMode": "mobile",
+    "totalScanned": 5,
+    "brokenCount": 1,
+    "a11yViolations": 639,
+    "avgSeoScore": 68,
+    "reportFilename": "report_28ZV6.html"
+  },
+  {
     "runId": "8THKE",
     "timestamp": "7/24/2026, 1:08:48 PM",
     "targetUrl": "https://lbb.in/",
