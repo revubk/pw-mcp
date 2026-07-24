@@ -51,7 +51,7 @@ test.describe("Dashboard Reporter Logic", () => {
 
     const htmlOutput = generateDashboardHtml(mockData);
 
-    expect(htmlOutput).toContain('<div class="metric-value">1</div>'); // Pages Discovered
+    expect(htmlOutput).toContain('<div class="metric-value">1</div>');
 
     expect(htmlOutput).toContain(
       '<div class="metric-value" style="color: var(--success);">1</div>',

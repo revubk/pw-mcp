@@ -50,10 +50,10 @@ export function compileSeoDrawerHtml(
   }
 
   return `
-    <div style="font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Detected Indexing Violations:</div>
+    <div style="font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Violations:</div>
     ${failuresMarkup}
     <div style="margin-top: 16px; padding-top: 14px; border-top: 1px dashed #e2e8f0;">
-        <div style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Affirmative Passing Confirmations:</div>
+        <div style="font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">Checks:</div>
         ${passMarkup}
     </div>`;
 }

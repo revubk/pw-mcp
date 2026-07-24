@@ -75,10 +75,10 @@ export function generateHistoricReportsHub(
           <td style="padding: 16px; font-size: 14px; color: #475569;">${h.timestamp}</td>
           <td style="padding: 16px; font-size: 14px; font-weight: 600; color: #0f172a;">${h.targetUrl}</td>
           <td style="padding: 16px; font-size: 13px; font-weight: 700; color: #2563eb;">${clearDeviceLabel}</td>
-          <td style="padding: 16px; font-size: 14px; color: #475569;">${h.totalScanned} pages</td>
-          <td style="padding: 16px; font-size: 14px; color: ${h.brokenCount > 0 ? "#dc2626" : "#475569"}; font-weight: ${h.brokenCount > 0 ? "600" : "normal"};">${h.brokenCount}</td>
-          <td style="padding: 16px; font-size: 14px; color: ${h.a11yViolations > 0 ? "#dc2626" : "#475569"}; font-weight: ${h.a11yViolations > 0 ? "600" : "normal"};">${h.a11yViolations}</td>
-          <td style="padding: 16px; font-size: 14px; ${seoAlertColor}">${h.avgSeoScore}/100</td>
+          <td data-label="Pages" style="padding: 16px; font-size: 14px; color: #475569;">${h.totalScanned} pages</td>
+          <td data-label="Broken" style="padding: 16px; font-size: 14px; color: ${h.brokenCount > 0 ? "#dc2626" : "#475569"}; font-weight: ${h.brokenCount > 0 ? "600" : "normal"};">${h.brokenCount}</td>
+          <td data-label="A11y" style="padding: 16px; font-size: 14px; color: ${h.a11yViolations > 0 ? "#dc2626" : "#475569"}; font-weight: ${h.a11yViolations > 0 ? "600" : "normal"};">${h.a11yViolations}</td>
+          <td data-label="SEO" style="padding: 16px; font-size: 14px; ${seoAlertColor}">${h.avgSeoScore}/100</td>
       </tr>`;
     })
     .join("");
@@ -109,31 +109,163 @@ export function generateHistoricReportsHub(
     <meta charset="UTF-8">
     <title>Automation Run Matrix History Hub</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #f8fafc; color: #1e293b; padding: 50px; margin: 0; }
-        .wrapper { max-width: 1200px; margin: 0 auto; }
-        h1 { margin: 0 0 8px 0; color: #0f172a; font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
-        table { width: 100%; border-collapse: collapse; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; }
-        th { background: #f1f5f9; color: #475569; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 16px; text-align: left; border-bottom: 2px solid #e2e8f0; }
-        td { padding: 16px; border-bottom: 1px solid #e2e8f0; font-size: 14px; color: #475569; }
-        .clickable-row { cursor: pointer; transition: background 0.15s; }
-        .clickable-row:hover { background: #f8fafc; }
-        tr:last-child td { border-bottom: none; }
+        :root {
+            --bg: #e6f2dd;
+            --surface: #ffffff;
+            --text: #1f2937;
+            --muted: #4b5563;
+            --accent: #659287;
+            --accent-soft: #88bda4;
+            --border: #d9e7d4;
+            --success: #2f855a;
+            --warning: #d69e2e;
+            --danger: #c53030;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background: linear-gradient(180deg, var(--bg) 0%, #f8fafc 100%);
+            color: var(--text);
+            padding: 40px;
+            margin: 0;
+        }
+
+        .wrapper {
+            max-width: 1180px;
+            margin: 0 auto;
+        }
+
+        .hero {
+            background: #f2f7ef;
+            border: 1px solid rgba(101, 146, 135, 0.28);
+            border-radius: 24px;
+            padding: 28px 32px;
+            margin-bottom: 28px;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+        }
+
+        h1 {
+            margin: 0;
+            color: var(--text);
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: -0.6px;
+        }
+
+        .hero p {
+            margin: 12px 0 0;
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .hero strong {
+            color: var(--text);
+            font-weight: 700;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--surface);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+            border: 1px solid rgba(101, 146, 135, 0.18);
+        }
+
+        thead tr {
+            background: linear-gradient(90deg, var(--accent-soft), #ffffff);
+        }
+
+        th {
+            color: #2f4858;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            padding: 18px 20px;
+            text-align: left;
+            border-bottom: 1px solid rgba(101, 146, 135, 0.15);
+        }
+
+        td {
+            padding: 18px 20px;
+            border-bottom: 1px solid rgba(101, 146, 135, 0.10);
+            font-size: 14px;
+            color: var(--text);
+        }
+
+        tbody tr {
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .clickable-row {
+            cursor: pointer;
+        }
+
+        .clickable-row:hover {
+            background: rgba(136, 189, 164, 0.16);
+            transform: translateY(-1px);
+        }
+
+        td:nth-child(3) {
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        td:nth-child(5), td:nth-child(6), td:nth-child(7) {
+            font-weight: 600;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 72px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            color: var(--surface);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .status-broken { background: rgba(197, 48, 48, 0.12); color: var(--danger); }
+        .status-fixed { background: rgba(47, 133, 90, 0.12); color: var(--success); }
+
+        @media (max-width: 980px) {
+            body { padding: 24px; }
+            .hero { padding: 24px; }
+            th, td { padding: 14px 16px; }
+        }
+
+        @media (max-width: 720px) {
+            .wrapper { padding: 0 12px; }
+            table, thead, tbody, th, td, tr { display: block; }
+            thead { display: none; }
+            tr { margin-bottom: 18px; border-radius: 18px; overflow: hidden; background: var(--surface); box-shadow: 0 18px 30px rgba(15, 23, 42, 0.06); }
+            td { display: flex; justify-content: space-between; padding: 14px 16px; border-bottom: none; }
+            td::before { content: attr(data-label); color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 14px; flex: 1; }
+            td:last-child { border-bottom: 0; }
+        }
     </style>
 </head>
 <body>
     <div class="wrapper">
-        <h1>Site Auditor Engine History Hub</h1>
-        <p style="color: #64748b; font-size: 15px; margin-top: 0; margin-bottom: 32px;">Domain-Isolated Dashboard Network tracking regression metrics for target host environment: <strong style="color: #0f172a;">${hostName}</strong></p>
+        <div class="hero">
+            <h1>History Hub</h1>
+            <p>Dashboard target host: <strong>${hostName}</strong></p>
+        </div>
         <table>
             <thead>
                 <tr>
-                    <th>Execution Date & Time</th>
-                    <th>Target Destination Website</th>
-                    <th>Device Emulated</th>
-                    <th>Pages Crawled</th>
-                    <th>P1 Broken Links</th>
-                    <th>A11y Violations (P2)</th>
-                    <th>Technical SEO Metrics</th>
+                    <th>Date & Time</th>
+                    <th>Site</th>
+                    <th>Device</th>
+                    <th>Total Pages</th>
+                    <th>Broken Pages</th>
+                    <th>A11y Violations</th>
+                    <th>SEO Score</th>
                 </tr>
             </thead>
             <tbody>

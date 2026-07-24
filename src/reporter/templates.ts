@@ -50,6 +50,7 @@ export function renderPageBlockTemplate(
         <div class="summary-content">
           <span class="accordion-arrow">▶</span>
           <strong class="url-text">${page.url}</strong>
+          <button type="button" class="page-url-copy-btn" data-page-url="${page.url}" aria-label="Copy page URL">Copy URL</button>
           <span class="status-badge" style="background: ${statusBg}; color: ${statusColor}; border-color: ${statusColor};">
             HTTP ${page.status}
           </span>
@@ -160,20 +161,22 @@ export function generateDashboardHtml(data: DetailedReportData): string {
       <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
       <style>
         :root {
-          --bg: #f8fafc;
+          --bg: #e6f2dd;
           --surface: #ffffff;
-          --text: #0f172a;
-          --text-muted: #64748b;
-          --border: #e2e8f0;
-          --accent: #2563eb;
-          --success: #16a34a;
-          --danger: #dc2626;
-          --warning: #d97706;
+          --text: #1f2937;
+          --text-muted: #4b5563;
+          --border: #d9e7d4;
+          --accent: #659287;
+          --accent-soft: #88bda4;
+          --accent-strong: #3d6d5b;
+          --success: #2f855a;
+          --danger: #c53030;
+          --warning: #d69e2e;
         }
-        body { font-family: system-ui, -apple-system, sans-serif; background: linear-gradient(180deg, #eef6ff 0%, #f8fafc 100%); color: var(--text); padding: 40px; margin: 0; line-height: 1.6; }
-        .dashboard-container { max-width: 1400px; margin: 0 auto; background: rgba(255,255,255,0.98); padding: 40px; border-radius: 20px; box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08); border: 1px solid rgba(148, 163, 184, 0.18); }
-        .header { border-bottom: 1px solid rgba(148, 163, 184, 0.16); padding-bottom: 24px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
-        .header h1 { margin: 0 0 8px 0; font-size: 28px; font-weight: 800; color: #1e293b; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: linear-gradient(180deg, var(--bg) 0%, #f8fafc 100%); color: var(--text); padding: 40px; margin: 0; line-height: 1.6; }
+        .dashboard-container { max-width: 1400px; margin: 0 auto; background: rgba(255,255,255,0.94); padding: 40px; border-radius: 24px; box-shadow: 0 24px 80px rgba(15, 23, 42, 0.08); border: 1px solid rgba(101, 146, 135, 0.18); }
+        .header { border-bottom: 1px solid rgba(101, 146, 135, 0.18); padding-bottom: 24px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
+        .header h1 { margin: 0 0 8px 0; font-size: 30px; font-weight: 800; color: var(--text); }
         .header p { margin: 0; color: var(--text-muted); font-size: 14px; font-weight: 500; }
         
         .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 40px; }
@@ -182,8 +185,8 @@ export function generateDashboardHtml(data: DetailedReportData): string {
         .metric-label { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.6px; margin-bottom: 8px; }
 
         .charts-container { display: grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 24px; margin-bottom: 40px; }
-        .chart-box { background: #ffffff; border: 1px solid rgba(148, 163, 184, 0.14); border-radius: 18px; padding: 22px 20px 18px; box-shadow: 0 16px 35px rgba(15, 23, 42, 0.06); display: flex; flex-direction: column; align-items: stretch; min-height: 330px; }
-        .chart-box h3 { font-size: 13px; color: #475569; text-transform: uppercase; margin-top: 0; margin-bottom: 18px; letter-spacing: 0.6px; width: 100%; text-align: left; border-bottom: 1px solid rgba(148, 163, 184, 0.16); padding-bottom: 12px; }
+        .chart-box { background: #ffffff; border: 1px solid rgba(101, 146, 135, 0.18); border-radius: 18px; padding: 22px 20px 18px; box-shadow: 0 16px 35px rgba(15, 23, 42, 0.06); display: flex; flex-direction: column; align-items: stretch; min-height: 330px; }
+        .chart-box h3 { font-size: 13px; color: #2f4858; text-transform: uppercase; margin-top: 0; margin-bottom: 18px; letter-spacing: 0.6px; width: 100%; text-align: left; border-bottom: 1px solid rgba(101, 146, 135, 0.18); padding-bottom: 12px; }
         .canvas-wrapper { position: relative; height: 240px; width: 100%; display: flex; justify-content: center; }
         .canvas-wrapper { position: relative; height: 220px; width: 100%; display: flex; justify-content: center; }
 
@@ -233,7 +236,11 @@ export function generateDashboardHtml(data: DetailedReportData): string {
 
         .script-path-box { margin-top: 16px; background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid var(--border); }
         .script-path-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
-        .a11y-tag-btn { display: inline-block; background: var(--accent); color: white; padding: 6px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; text-decoration: none; margin-bottom: 12px; }
+        .a11y-tag-btn { display: inline-block; background: var(--accent); color: white; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; text-decoration: none; margin-bottom: 12px; }
+        .link-copy-row { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+        .link-copy-link { color: var(--accent-strong); font-weight: 700; text-decoration: underline; }
+        .link-copy-btn, .page-url-copy-btn { background: var(--accent); color: white; border: none; padding: 6px 12px; border-radius: 999px; font-size: 12px; cursor: pointer; font-weight: 700; transition: background 0.2s, transform 0.2s; }
+        .link-copy-btn:hover, .page-url-copy-btn:hover { background: #4f7f6c; transform: translateY(-1px); }
         
         #backToTop { position: fixed; bottom: 30px; right: 30px; background: var(--accent); color: white; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.2); opacity: 0; transition: opacity 0.3s, transform 0.2s; font-size: 20px; z-index: 1000; pointer-events: none; }
         #backToTop.visible { opacity: 1; pointer-events: auto; }
@@ -243,9 +250,9 @@ export function generateDashboardHtml(data: DetailedReportData): string {
         .copy-btn { position: absolute; top: 8px; right: 8px; background: #334155; border: 1px solid #475569; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 600; transition: background 0.2s; }
         .copy-btn:hover { background: #475569; }
         .link-copy-row { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
-        .link-copy-link { color: var(--accent); font-weight: 700; text-decoration: underline; }
-        .link-copy-btn { background: #2563eb; color: white; border: none; padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: 700; transition: background 0.2s; }
-        .link-copy-btn:hover { background: #1d4ed8; }
+        .link-copy-link { color: var(--accent-strong); font-weight: 700; text-decoration: underline; }
+        .link-copy-btn, .page-url-copy-btn { background: var(--accent); color: white; border: none; padding: 6px 12px; border-radius: 999px; font-size: 12px; cursor: pointer; font-weight: 700; transition: background 0.2s, transform 0.2s; }
+        .link-copy-btn:hover, .page-url-copy-btn:hover { background: #4f7f6c; transform: translateY(-1px); }
       </style>
     </head>
     <body>
@@ -385,6 +392,21 @@ export function generateDashboardHtml(data: DetailedReportData): string {
         document.querySelectorAll('.link-copy-btn').forEach((button) => {
           button.addEventListener('click', () => {
             const copyText = button.getAttribute('data-copy-text') || '';
+            navigator.clipboard.writeText(copyText).then(() => {
+              const previousText = button.textContent;
+              button.textContent = 'Copied!';
+              setTimeout(() => {
+                button.textContent = previousText;
+              }, 2000);
+            });
+          });
+        });
+
+        document.querySelectorAll('.page-url-copy-btn').forEach((button) => {
+          button.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const copyText = button.getAttribute('data-page-url') || '';
             navigator.clipboard.writeText(copyText).then(() => {
               const previousText = button.textContent;
               button.textContent = 'Copied!';
