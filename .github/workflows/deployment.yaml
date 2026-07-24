@@ -42,7 +42,11 @@ on:
         default: true
         type: boolean
 
+        
   deployment_status:
+
+permissions:
+  contents: write
 
 jobs:
   autonomous-audit:
@@ -52,6 +56,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -79,6 +85,22 @@ jobs:
           CI: "true"
 
           LM_STUDIO_URL: ${{ secrets.PROD_LLM_URL || 'http://localhost:1234/v1/chat/completions' }}
+
+      - name: Commit and Push History Database
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Stage the reports folder (which contains history_database.json and new HTML files)
+          git add reports/
+          
+          # Only commit and push if there are actually changes
+          if git diff --staged --quiet; then
+            echo "No new history to commit."
+          else
+            git commit -m "chore(audit): update automated history hub [skip ci]"
+            git push
+          fi
 
       - name: Upload Audit Dashboard & Artifacts
         if: always()
