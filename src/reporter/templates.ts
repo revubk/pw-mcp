@@ -163,20 +163,21 @@ export function generateDashboardHtml(data: DetailedReportData): string {
           --danger: #dc2626;
           --warning: #d97706;
         }
-        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 40px; margin: 0; line-height: 1.6; }
-        .dashboard-container { max-width: 1400px; margin: 0 auto; background: var(--surface); padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid var(--border); }
-        .header { border-bottom: 2px solid var(--border); padding-bottom: 24px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-end; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: linear-gradient(180deg, #eef6ff 0%, #f8fafc 100%); color: var(--text); padding: 40px; margin: 0; line-height: 1.6; }
+        .dashboard-container { max-width: 1400px; margin: 0 auto; background: rgba(255,255,255,0.98); padding: 40px; border-radius: 20px; box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08); border: 1px solid rgba(148, 163, 184, 0.18); }
+        .header { border-bottom: 1px solid rgba(148, 163, 184, 0.16); padding-bottom: 24px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; }
         .header h1 { margin: 0 0 8px 0; font-size: 28px; font-weight: 800; color: #1e293b; }
         .header p { margin: 0; color: var(--text-muted); font-size: 14px; font-weight: 500; }
         
         .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 40px; }
-        .metric-card { background: var(--surface); padding: 24px; border-radius: 10px; border: 1px solid var(--border); text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
-        .metric-value { font-size: 2.2rem; font-weight: 800; margin: 8px 0; color: var(--text); }
+        .metric-card { background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%); padding: 24px; border-radius: 18px; border: 1px solid rgba(148, 163, 184, 0.18); text-align: center; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06); min-height: 150px; }
+        .metric-value { font-size: 2.4rem; font-weight: 800; margin: 8px 0; color: var(--text); }
         .metric-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
 
-        .charts-container { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 40px; }
-        .chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); display: flex; flex-direction: column; align-items: center; height: 300px; }
-        .chart-box h3 { font-size: 14px; color: var(--text-muted); text-transform: uppercase; margin-top: 0; margin-bottom: 15px; letter-spacing: 0.5px; width: 100%; text-align: left; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+        .charts-container { display: grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 24px; margin-bottom: 40px; }
+        .chart-box { background: #ffffff; border: 1px solid rgba(148, 163, 184, 0.14); border-radius: 18px; padding: 22px 20px 18px; box-shadow: 0 16px 35px rgba(15, 23, 42, 0.06); display: flex; flex-direction: column; align-items: stretch; min-height: 330px; }
+        .chart-box h3 { font-size: 13px; color: #475569; text-transform: uppercase; margin-top: 0; margin-bottom: 18px; letter-spacing: 0.6px; width: 100%; text-align: left; border-bottom: 1px solid rgba(148, 163, 184, 0.16); padding-bottom: 12px; }
+        .canvas-wrapper { position: relative; height: 240px; width: 100%; display: flex; justify-content: center; }
         .canvas-wrapper { position: relative; height: 220px; width: 100%; display: flex; justify-content: center; }
 
         details > summary { list-style: none; cursor: pointer; }
@@ -197,6 +198,25 @@ export function generateDashboardHtml(data: DetailedReportData): string {
         .seo-summary { border-left-color: var(--warning); }
         .a11y-summary { border-left-color: var(--success); }
         .sub-content { padding: 16px; background: #ffffff; border-top: 1px solid var(--border); }
+        .sub-accordion .seo-summary + .sub-content,
+        .sub-accordion .a11y-summary + .sub-content {
+          max-height: 320px;
+          overflow-y: auto;
+          padding-right: 18px;
+        }
+        .sub-accordion .seo-summary + .sub-content::-webkit-scrollbar,
+        .sub-accordion .a11y-summary + .sub-content::-webkit-scrollbar {
+          width: 10px;
+        }
+        .sub-accordion .seo-summary + .sub-content::-webkit-scrollbar-thumb,
+        .sub-accordion .a11y-summary + .sub-content::-webkit-scrollbar-thumb {
+          background: rgba(37, 99, 235, 0.18);
+          border-radius: 999px;
+        }
+        .sub-accordion .seo-summary + .sub-content::-webkit-scrollbar-track,
+        .sub-accordion .a11y-summary + .sub-content::-webkit-scrollbar-track {
+          background: rgba(148, 163, 184, 0.08);
+        }
 
         .accordion-arrow, .sub-arrow { font-size: 12px; transition: transform 0.2s; color: var(--text-muted); }
         details[open] > summary > .summary-content > .accordion-arrow { transform: rotate(90deg); }
@@ -221,7 +241,6 @@ export function generateDashboardHtml(data: DetailedReportData): string {
           <div>
             <h1>Autonomous Test Generation Matrix</h1>
             <p>Target Environment: <strong style="color: var(--text);">${data.targetUrl}</strong> | Emulation Mode: <strong style="color: var(--accent); text-transform: uppercase;">${data.deviceMode}</strong> | Run ID: <strong style="font-family: monospace;">${data.runId}</strong></p>
-            ${data.playwrightReportPath ? `<p style="margin: 12px 0 0 0; font-size: 14px;"><a href="${data.playwrightReportPath}" target="_blank" style="color: white; background: var(--accent); padding: 8px 14px; border-radius: 8px; display: inline-block; text-decoration: none; font-weight: 700;">View Native Playwright Visual Report</a></p>` : ""}
           </div>
           <a href="index.html" style="color: var(--accent); text-decoration: none; font-weight: 600; font-size: 14px;">← Return to History Hub</a>
         </div>
@@ -291,7 +310,16 @@ export function generateDashboardHtml(data: DetailedReportData): string {
           });
 
           const a11yCtx = document.getElementById('a11yChart').getContext('2d');
-          const pageLabels = ${JSON.stringify(data.pages.map((p) => new URL(p.url).pathname || "/"))};
+          const pageLabels = ${JSON.stringify(
+            data.pages.map((p) => {
+              try {
+                const u = new URL(p.url);
+                return `${u.pathname}${u.search}` || "/";
+              } catch {
+                return p.url;
+              }
+            }),
+          )};
           const a11yData = ${JSON.stringify(data.pages.map((p) => p.a11yErrors))};
 
           new Chart(a11yCtx, {
