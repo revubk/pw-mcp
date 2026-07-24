@@ -1,0 +1,8 @@
+[
+  {
+    "url": "https://lbb.in/all/post/featured",
+    "status": "new_baseline",
+    "expectedPath": "reports/baselines/visual.spec.ts-snapshots/https-lbb-in-all-post-featured-desktop.png",
+    "diffPath": null
+  }
+]
