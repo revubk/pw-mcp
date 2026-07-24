@@ -88,4 +88,5 @@ jobs:
           path: |
             reports/
             test-results/
+            tests/mcp/
           retention-days: 14
