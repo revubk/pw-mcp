@@ -1,24 +1,22 @@
-import { DetailedReportData, PageAuditResult } from "../types/audit";
-import { compileAccessibilityDrawerHtml } from "./components/a11yDrawer";
-import { compileFunctionalDrawerHtml } from "./components/functional";
-import { compileSeoDrawerHtml } from "./components/seoDrawer";
+import { DetailedReportData, PageAuditResult } from '../types/audit';
+import { compileAccessibilityDrawerHtml } from './components/a11yDrawer';
+import { compileFunctionalDrawerHtml } from './components/functional';
+import { compileSeoDrawerHtml } from './components/seoDrawer';
 
-export function renderPageBlockTemplate(
-  page: PageAuditResult,
-  runId: string,
-): string {
+export function renderPageBlockTemplate(page: PageAuditResult, runId: string): string {
   const isBroken = page.status >= 400;
-  const statusColor = isBroken ? "var(--danger)" : "var(--success)";
-  const statusBg = isBroken ? "#fef2f2" : "#f0fdf4";
+  const statusColor = isBroken ? 'var(--danger)' : 'var(--success)';
+  const statusBg = isBroken ? '#fef2f2' : '#f0fdf4';
 
   const functionalHtml = compileFunctionalDrawerHtml(page);
   const a11yHtml = compileAccessibilityDrawerHtml(page.a11yDetails);
 
   const seoDetails = Array.isArray(page.seoDetails) ? page.seoDetails : [];
-  const seoPassDetails = Array.isArray(page.seoPassDetails)
-    ? page.seoPassDetails
-    : [];
+  const seoPassDetails = Array.isArray(page.seoPassDetails) ? page.seoPassDetails : [];
   const seoHtml = compileSeoDrawerHtml(seoDetails, seoPassDetails);
+
+  // Extract visual status
+  const vResult = (page as any).visualResults;
 
   return `
     <details class="page-accordion">
@@ -32,7 +30,7 @@ export function renderPageBlockTemplate(
         </div>
       </summary>
       
-     <div class="page-details-container">
+      <div class="page-details-container">
 
         <!-- SUB-ACCORDION 1: Functional -->
         <details class="sub-accordion">
@@ -43,7 +41,7 @@ export function renderPageBlockTemplate(
             ${functionalHtml}
             <div class="script-path-box">
               <div class="script-path-title">AI Script Generation Path:</div>
-              <code style="color: #a855f7; font-size: 13px; font-weight: 600;">tests/${page.url.replace(/[^a-z0-9]/gi, "_")}.spec.ts</code>
+              <code style="color: #a855f7; font-size: 13px; font-weight: 600;">tests/${page.url.replace(/[^a-z0-9]/gi, '_')}.spec.ts</code>
             </div>
           </div>
         </details>
@@ -64,35 +62,54 @@ export function renderPageBlockTemplate(
              <span class="sub-arrow">▶</span> Accessibility (WCAG) Analysis - ${page.a11yErrors} Errors
           </summary>
           <div class="sub-content">
-            ${page.screenshotPath ? `<a href="./${page.screenshotPath}" target="_blank" class="a11y-tag-btn">🖼️ View A11y Tagging Map</a>` : ""}
+            ${page.screenshotPath ? `<a href="./${page.screenshotPath}" target="_blank" class="a11y-tag-btn">🖼️ View A11y Tagging Map</a>` : ''}
             ${a11yHtml}
           </div>
         </details>
 
-        <!-- SUB-ACCORDION 4: Visual Regression (Playwright Slider) -->
+        <!-- SUB-ACCORDION 4: Visual Layout Engine -->
         <details class="sub-accordion">
-          <summary class="sub-summary" style="border-left-color: #a855f7;">
+          <summary class="sub-summary" style="border-left-color: #ec4899;">
              <span class="sub-arrow">▶</span> Visual Layout Engine (Pixel Diff)
           </summary>
-          <div class="sub-content" style="text-align: center; padding: 30px;">
-            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
-              Playwright has captured desktop, tablet, and mobile snapshots and compared them against the golden baselines.
-            </p>
-            <a href="../../playwright-report/index.html" target="_blank" style="background: #a855f7; color: white; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: 700; text-decoration: none; display: inline-block; transition: opacity 0.2s;">
-              🔍 Open Playwright Visual Slider & Diff Report
-            </a>
+          <div class="sub-content">
+            ${vResult && vResult.status === 'failed' && vResult.diffPath ? `
+              <div style="background: #fdf2f8; border: 1px solid #f472b6; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+                <h4 style="color: #be185d; margin-top: 0;">⚠️ Layout Shift Detected</h4>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px;">
+                  <div>
+                    <div style="font-weight: bold; font-size: 12px; margin-bottom: 8px; color: #475569;">BASELINE (EXPECTED)</div>
+                    <img src="../../${vResult.expectedPath}" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 4px;" alt="Baseline">
+                  </div>
+                  <div>
+                    <div style="font-weight: bold; font-size: 12px; margin-bottom: 8px; color: #be185d;">ACTUAL (PINK = CHANGES)</div>
+                    <img src="../../${vResult.diffPath}" style="width: 100%; border: 1px solid #f472b6; border-radius: 4px; filter: hue-rotate(310deg) saturate(1.5);" alt="Diff">
+                  </div>
+                </div>
+                
+                <div style="margin-top: 20px; text-align: center;">
+                  <a href="../../playwright-report/index.html" target="_blank" style="background: #ec4899; color: white; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 700; text-decoration: none; display: inline-block; transition: background 0.2s;">
+                    🔍 Open Playwright Slider Report
+                  </a>
+                </div>
+              </div>
+            ` : `
+              <div style="text-align: center; padding: 30px; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;">
+                <strong>✅ Visual Layout Verified / Baseline Established</strong><br>
+                <span style="font-size: 13px; color: #166534;">No layout shifts detected against the baseline (or a new baseline was successfully captured).</span>
+              </div>
+            `}
           </div>
         </details>
-
       </div>
+    </details>
   `;
 }
 
 export function generateDashboardHtml(data: DetailedReportData): string {
   const totalPages = data.pages.length;
-  const passedPages = data.pages.filter(
-    (p) => p.status < 400 && p.a11yErrors === 0,
-  ).length;
+  const passedPages = data.pages.filter(p => p.status < 400 && p.a11yErrors === 0).length;
 
   return `
     <!DOCTYPE html>
@@ -119,13 +136,11 @@ export function generateDashboardHtml(data: DetailedReportData): string {
         .header h1 { margin: 0 0 8px 0; font-size: 26px; font-weight: 800; }
         .header p { margin: 0; color: var(--text-muted); font-size: 14px; font-weight: 500; }
         
-        /* Metric Cards */
         .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px; }
         .metric-card { background: var(--surface); padding: 24px; border-radius: 10px; border: 1px solid var(--border); text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .metric-value { font-size: 2.5rem; font-weight: 800; margin: 12px 0; color: var(--text); }
         .metric-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
         
-        /* Main Accordion */
         details > summary { list-style: none; cursor: pointer; }
         details > summary::-webkit-details-marker { display: none; }
         .page-accordion { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: border-color 0.2s; }
@@ -137,7 +152,6 @@ export function generateDashboardHtml(data: DetailedReportData): string {
         .url-text { font-size: 14px; word-break: break-all; flex-grow: 1; }
         .status-badge { padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; border: 1px solid; white-space: nowrap; }
 
-        /* Sub Accordions */
         .page-details-container { padding: 24px; display: flex; flex-direction: column; gap: 16px; background: #ffffff; }
         .sub-accordion { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
         .sub-summary { padding: 12px 16px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; background: #f1f5f9; display: flex; align-items: center; gap: 8px; border-left: 4px solid var(--border); }
@@ -146,22 +160,18 @@ export function generateDashboardHtml(data: DetailedReportData): string {
         .a11y-summary { border-left-color: var(--success); }
         .sub-content { padding: 16px; background: #ffffff; border-top: 1px solid var(--border); }
 
-        /* Arrows */
         .accordion-arrow, .sub-arrow { font-size: 12px; transition: transform 0.2s; color: var(--text-muted); }
         details[open] > summary > .summary-content > .accordion-arrow { transform: rotate(90deg); }
         details[open] > summary > .sub-arrow { transform: rotate(90deg); }
 
-        /* Utilities */
         .script-path-box { margin-top: 16px; background: #f8fafc; padding: 12px; border-radius: 6px; border: 1px solid var(--border); }
         .script-path-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
         .a11y-tag-btn { display: inline-block; background: var(--accent); color: white; padding: 6px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; text-decoration: none; margin-bottom: 12px; }
         
-        /* Floating Back to Top Button */
         #backToTop { position: fixed; bottom: 30px; right: 30px; background: var(--accent); color: white; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.2); opacity: 0; transition: opacity 0.3s, transform 0.2s; font-size: 20px; z-index: 1000; pointer-events: none; }
         #backToTop.visible { opacity: 1; pointer-events: auto; }
         #backToTop:hover { transform: translateY(-3px); }
 
-        /* Copy Button Styles */
         pre { position: relative; background: #1e293b; color: #f8fafc; padding: 16px; border-radius: 6px; overflow-x: auto; font-size: 13px; }
         .copy-btn { position: absolute; top: 8px; right: 8px; background: #334155; border: 1px solid #475569; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 600; transition: background 0.2s; }
         .copy-btn:hover { background: #475569; }
@@ -188,19 +198,18 @@ export function generateDashboardHtml(data: DetailedReportData): string {
           </div>
           <div class="metric-card">
             <div class="metric-label">A11y Violations</div>
-            <div class="metric-value" style="color: ${data.a11yViolationCount > 0 ? "var(--warning)" : "var(--text)"}">${data.a11yViolationCount}</div>
+            <div class="metric-value" style="color: ${data.a11yViolationCount > 0 ? 'var(--warning)' : 'var(--text)'}">${data.a11yViolationCount}</div>
           </div>
         </div>
 
         <h3 style="font-size: 16px; color: var(--text); margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 8px; display: inline-block;">Granular Page Diagnostics</h3>
         
-        ${data.pages.map((page) => renderPageBlockTemplate(page, data.runId)).join("")}
+        ${data.pages.map(page => renderPageBlockTemplate(page, data.runId)).join('')}
       </div>
 
       <button id="backToTop" title="Go to top">↑</button>
 
       <script>
-        // Back to top behavior
         const backToTopBtn = document.getElementById("backToTop");
         window.addEventListener("scroll", () => {
           if (window.scrollY > 300) {
@@ -213,7 +222,6 @@ export function generateDashboardHtml(data: DetailedReportData): string {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         });
 
-        // Dynamic Copy buttons for all <pre> blocks
         document.querySelectorAll('pre').forEach(pre => {
           const btn = document.createElement('button');
           btn.className = 'copy-btn';

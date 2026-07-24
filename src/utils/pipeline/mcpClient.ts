@@ -1,237 +1,177 @@
-import { createConnection } from "@playwright/mcp";
-import { Page } from "playwright";
-import axios from "axios";
-import * as fs from "fs";
-import * as path from "path";
+import axios from 'axios';
+import * as fs from 'fs';
+import * as path from 'path';
 
-export async function executeAutonomousMcpAgent(
-  page: Page,
-  url: string,
-): Promise<string | null> {
-  const hostName = new URL(url).hostname.replace(/[^a-z0-9]/gi, "_");
-  const testsDir = path.join(process.cwd(), "tests", hostName);
-  const fileSafeName = url
-    .replace(/[^a-z0-9]/gi, "_")
-    .toLowerCase()
-    .substring(0, 50);
-  const targetScriptPath = path.join(testsDir, `${fileSafeName}.spec.ts`);
+interface DomElementNode {
+  tagName: string;
+  text?: string;
+  id?: string;
+  className?: string;
+  placeholder?: string;
+  name?: string;
+  type?: string;
+  href?: string;
+}
 
+/**
+ * Helper to extract interactive elements from the Playwright page and 
+ * filter out non-existent elements so the LLM never hallucinates.
+ */
+async function extractVerifiedDomSchema(page: any): Promise<DomElementNode[]> {
   try {
-    // 1. Initialize MCP server gateway
-    const mcpServerInstance = await createConnection({
-      browser: {
-        launchOptions: { headless: true },
-        contextOptions: { viewport: { width: 1280, height: 720 } },
-      },
-    });
-    void mcpServerInstance;
-
-    const blueprintFilePath = path.join(
-      process.cwd(),
-      "mcp_prompt_blueprint.txt",
-    );
-    let userCustomPromptAddon = "";
-    if (fs.existsSync(blueprintFilePath)) {
-      userCustomPromptAddon = fs.readFileSync(blueprintFilePath, "utf8");
-    }
-
-    // 2. Extract DOM schema
-    const interactiveElementsSchema = await page.evaluate(() => {
-      const title = document.title || "";
-      const description =
-        document
-          .querySelector('meta[name="description"]')
-          ?.getAttribute("content")
-          ?.trim() || "";
-      const firstHeading =
-        Array.from(document.querySelectorAll("h1, h2"))
-          .map((e) => e.textContent?.trim())
-          .find(Boolean) || "";
-      const DOMNodes = Array.from(
-        document.querySelectorAll("a, button, input, select, textarea"),
-      );
-      return {
-        pageTitle: title,
-        pageDescription: description,
-        firstHeading,
-        url: window.location.href,
-        interactiveElements: DOMNodes.slice(0, 20).map((node) => {
-          const htmlElement = node as HTMLElement;
-          return {
-            tagName: htmlElement.tagName.toLowerCase(),
-            id: htmlElement.id ? `#${htmlElement.id}` : "",
-            className: htmlElement.className
-              ? `.${htmlElement.className.trim().split(/\s+/)[0]}`
-              : "",
-            text: htmlElement.textContent?.trim().substring(0, 80) || "",
-            type:
-              node instanceof HTMLInputElement ||
-              node instanceof HTMLTextAreaElement
-                ? node.type || "text"
-                : "",
-            href:
-              node instanceof HTMLAnchorElement
-                ? node.getAttribute("href") || ""
-                : "",
-          };
-        }),
-      };
+    const rawElements: DomElementNode[] = await page.evaluate(() => {
+      const selectors = 'button, input, select, textarea, a[href], [role="button"], [role="tab"]';
+      const nodes = Array.from(document.querySelectorAll(selectors));
+      
+      return nodes.map(el => ({
+        tagName: el.tagName.toLowerCase(),
+        text: el.textContent?.trim().substring(0, 40) || '',
+        id: el.id || '',
+        className: el.className?.toString().substring(0, 50) || '',
+        placeholder: el.getAttribute('placeholder') || '',
+        name: el.getAttribute('name') || '',
+        type: el.getAttribute('type') || '',
+        href: el.getAttribute('href') || ''
+      })).slice(0, 30); // Cap to avoid token bloat
     });
 
-    const schemaContextString = JSON.stringify(
-      interactiveElementsSchema,
-      null,
-      2,
-    );
-    let generatedActionLines = "";
+    return rawElements;
+  } catch (err) {
+    console.warn('⚠️ [MCP Agent] Failed to extract DOM schema cleanly:', err);
+    return [];
+  }
+}
 
-    const sharedPromptBody = `
-${userCustomPromptAddon}
+/**
+ * Load historical knowledge ledger for this URL (Self-healing feedback loop)
+ */
+function getPageKnowledge(url: string): string {
+  const ledgerPath = path.join(process.cwd(), 'reports', 'knowledge_ledger.json');
+  if (fs.existsSync(ledgerPath)) {
+    try {
+      const ledger = JSON.parse(fs.readFileSync(ledgerPath, 'utf8'));
+      return ledger[url] ? `Learned Behavior/Fixes from past runs: ${ledger[url]}` : '';
+    } catch (e) {}
+  }
+  return '';
+}
 
-Page metadata:
-- title: ${interactiveElementsSchema.pageTitle}
-- url: ${interactiveElementsSchema.url}
-
-Interactive DOM schema:
-${schemaContextString}
-`.trim();
-
-    const sanitizeModelOutput = (raw: string): string => {
-      let cleaned = raw.trim();
-      if (!cleaned) return "";
-
-      if (cleaned.includes("</think>")) {
-        cleaned = cleaned.split("</think>").pop()!.trim();
-      }
-      cleaned = cleaned
-        .replace(/<thought>[\s\S]*?<\/thought>/gi, "")
-        .replace(/<\|channel>thought[\s\S]*?<channel\|>/gi, "")
-        .replace(/```(?:typescript|ts)?/gi, "")
-        .replace(/```/g, "");
-
-      const lines = cleaned
-        .split(/\r?\n/)
-        .map((l) => l.trim())
-        .filter(Boolean);
-      const relevant = lines.filter(
-        (stmt) => stmt.startsWith("await ") || stmt.startsWith("//"),
-      );
-
-      return relevant.slice(0, 6).join("\n    ");
-    };
-
-    // --- Provider 1: Gemini API ---
-    const geminiApiKey = (process.env.GEMINI_API_KEY || "").trim();
-    const geminiModel = (process.env.GEMINI_MODEL || "gemini-2.0-flash").trim();
-
-    if (geminiApiKey) {
-      try {
-        console.log(
-          `   🧠 [Gemini Active] Generating flow via ${geminiModel}...`,
-        );
-        const response = await axios.post(
-          `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`,
-          {
-            contents: [{ parts: [{ text: sharedPromptBody }] }],
-            generationConfig: { temperature: 0.0, maxOutputTokens: 2048 },
-          },
-          { timeout: 30000 },
-        );
-        const candidateText =
-          response.data?.candidates?.[0]?.content?.parts
-            ?.map((p: any) => p.text)
-            .join("\n") || "";
-        generatedActionLines = sanitizeModelOutput(candidateText);
-      } catch (_) {
-        console.log("   ⚠️  Gemini call failed. Falling back.");
-      }
-    }
-
-    // --- Provider 2: LM Studio ---
-    const lmStudioModel = (process.env.LM_STUDIO_MODEL || "").trim();
-    if (!generatedActionLines && lmStudioModel) {
-      try {
-        console.log(
-          `   🧠 [LM Studio Active] Generating flow via ${lmStudioModel}`,
-        );
-        const response = await axios.post(
-          "http://localhost:1234/v1/chat/completions",
-          {
-            model: lmStudioModel,
-            messages: [
-              {
-                role: "system",
-                content:
-                  "Output ONLY raw Playwright TypeScript statements starting with await. No explanations.",
-              },
-              { role: "user", content: sharedPromptBody },
-            ],
-            temperature: 0.1,
-            max_tokens: 2048,
-          },
-          { timeout: 45000 },
-        );
-        const candidateText =
-          response.data?.choices?.[0]?.message?.content || "";
-        generatedActionLines = sanitizeModelOutput(candidateText);
-      } catch (_) {
-        console.log("   ⚠️  LM Studio call failed. Falling back to Ollama.");
-      }
-    }
-
-    // --- Provider 3: Ollama ---
-    if (!generatedActionLines) {
-      try {
-        console.log(`   🧠 [Local AI Active] Processing via Ollama...`);
-        const response = await axios.post(
-          "http://localhost:11434/api/generate",
-          {
-            model: "deepseek-r1:1.5b",
-            prompt: sharedPromptBody,
-            stream: false,
-            options: { temperature: 0.1 },
-          },
-          { timeout: 45000 },
-        );
-
-        generatedActionLines = sanitizeModelOutput(
-          response.data.response.trim(),
-        );
-      } catch (_) {
-        console.log(
-          `   ⚠️  Local Ollama unreachable. Using baseline template.`,
-        );
-      }
-    }
-
-    const verifiedCompilationOutput = `import { test, expect } from '@playwright/test';
-
-test('Official Playwright MCP Autonomous Scan — Route: [${url}]', async ({ page }) => {
-  await page.goto('${url}', { waitUntil: 'networkidle' });
+/**
+ * Save runtime feedback back into the knowledge ledger
+ */
+export function updatePageKnowledge(url: string, executionStatus: 'passed' | 'failed', errorMessage?: string) {
+  const ledgerPath = path.join(process.cwd(), 'reports', 'knowledge_ledger.json');
+  let ledger: Record<string, string> = {};
   
-  const documentContainerBody = page.locator('body');
-  await expect(documentContainerBody).toBeVisible();
-
-  try {
-    ${generatedActionLines || `// Baseline fallback checks\n    await expect(page.locator('body')).toBeVisible();`}
-  } catch (flowError) {
-    console.log('Interaction pass segment skipped safely:', flowError.message);
+  if (fs.existsSync(ledgerPath)) {
+    try {
+      ledger = JSON.parse(fs.readFileSync(ledgerPath, 'utf8'));
+    } catch (e) {}
   }
 
-  await expect(page).toBeTruthy();
+  if (executionStatus === 'failed' && errorMessage) {
+    if (errorMessage.includes('Search') || errorMessage.includes('timeout')) {
+      ledger[url] = 'Warning: This page lacks an explicit search button. Use page.keyboard.press("Enter") instead of clicking a submit button.';
+    } else {
+      ledger[url] = `Previous execution encountered error: ${errorMessage.substring(0, 100)}`;
+    }
+  } else {
+    ledger[url] = 'Verified: Previous interaction script executed successfully with current selectors.';
+  }
+
+  fs.writeFileSync(ledgerPath, JSON.stringify(ledger, null, 2), 'utf8');
+}
+
+/**
+ * Main Autonomous MCP Agent Execution Pipeline
+ */
+export async function executeAutonomousMcpAgent(page: any, url: string): Promise<string | null> {
+  const lmStudioUrl = process.env.LM_STUDIO_URL || 'http://localhost:1234/v1/chat/completions';
+  const modelName = process.env.LM_STUDIO_MODEL || 'qwen2.5-coder-7b-instruct';
+
+  // 1. Extract real DOM schema so we only use elements that actually exist
+  const verifiedSchema = await extractVerifiedDomSchema(page);
+  if (verifiedSchema.length === 0) {
+    console.log('   ⚠️ [MCP Agent] No interactive elements found in DOM. Skipping script generation.');
+    return null;
+  }
+
+  // 2. Pull historic knowledge ledger for this page
+  const pageKnowledge = getPageKnowledge(url);
+
+  // 3. Load blueprint rules
+  let blueprintPrompt = '';
+  const blueprintPath = path.join(process.cwd(), 'mcp_prompt_blueprint.txt');
+  if (fs.existsSync(blueprintPath)) {
+    blueprintPrompt = fs.readFileSync(blueprintPath, 'utf8');
+  }
+
+  const constrainedSystemPrompt = `${blueprintPrompt}
+  
+  CRITICAL CONSTRAINT: You are provided with a VERIFIED DOM SCHEMA below. You are strictly forbidden from interacting with any element type, placeholder, or role that is NOT present in this schema. If a search bar exists without a button, use keyboard enter.
+  
+  ${pageKnowledge}`;
+
+  const userPayload = `Target URL: ${url}
+  
+  VERIFIED DOM SCHEMA ELEMENTS PRESENT ON PAGE:
+  ${JSON.stringify(verifiedSchema, null, 2)}`;
+
+  try {
+    console.log(`   🧠 [Local AI] Querying model (${modelName}) with verified DOM schema...`);
+    
+    const response = await axios.post(
+      lmStudioUrl,
+      {
+        model: modelName,
+        messages: [
+          { role: 'system', content: constrainedSystemPrompt },
+          { role: 'user', content: userPayload }
+        ],
+        temperature: 0.1,
+        max_tokens: 1024
+      },
+      { timeout: 180000 } // 3-minute timeout safety net
+    );
+
+    const rawContent = response.data.choices[0]?.message?.content || '';
+    const cleanedStatements = rawContent
+      .replace(/```typescript/g, '')
+      .replace(/```ts/g, '')
+      .replace(/```/g, '')
+      .trim();
+
+    if (!cleanedStatements) {
+      console.log('   ⚠️ [MCP Agent] Model returned empty interaction statements.');
+      return null;
+    }
+
+    // 4. Compile into a strict, clean Playwright test file (WITHOUT try/catch hiding errors)
+    const testFileContent = `import { test, expect } from '@playwright/test';
+
+test('Autonomous Verified Test — Route: ${url}', async ({ page }) => {
+  await page.goto('${url}', { waitUntil: 'networkidle' });
+  await expect(page.locator('body')).toBeVisible();
+
+  // AI Generated Verified Workflow Statements
+  ${cleanedStatements}
 });
 `;
 
+    const safeFilename = url.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const testsDir = path.join(process.cwd(), 'tests', new URL(url).hostname.replace(/[^a-z0-9]/gi, '_'));
+    
     if (!fs.existsSync(testsDir)) {
       fs.mkdirSync(testsDir, { recursive: true });
     }
 
-    fs.writeFileSync(targetScriptPath, verifiedCompilationOutput, "utf8");
-    return targetScriptPath;
+    const scriptPath = path.join(testsDir, `${safeFilename}.spec.ts`);
+    fs.writeFileSync(scriptPath, testFileContent, 'utf8');
+
+    return scriptPath;
+
   } catch (error: any) {
-    console.error(
-      `   ❌ Playwright MCP Generation Exception: ${error.message}`,
-    );
+    console.error(`   ❌ [MCP Agent Error] Failed to generate script for ${url}:`, error.message);
     return null;
   }
 }

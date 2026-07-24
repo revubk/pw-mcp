@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import dotenv from 'dotenv';
 
 export default defineConfig({
   testDir: "tests",
@@ -9,9 +10,12 @@ export default defineConfig({
 
   updateSnapshots: "missing",
 
+  snapshotDir: './reports/baselines',
+
   expect: {
-    timeout: 5000,
-    toHaveScreenshot: { maxDiffPixelRatio: 0.02 },
+    toHaveScreenshot: {
+      pathTemplate: '{snapshotDir}/{arg}-{ext}',
+    },
   },
 
   fullyParallel: true,

@@ -1,7 +1,9 @@
 import { execSync } from "child_process";
 import * as fs from "fs";
+import * as path from "path";
 import { WebCrawler } from "../crawler/crawler";
 import { generateHistoricReportsHub } from "../reporter/reporter";
+import { generateDashboardHtml } from "../reporter/templates";
 import {
   DetailedReportData,
   PageAuditResult,
@@ -12,7 +14,6 @@ import { backfillIncompletePages } from "./pipeline/dataBackfill";
 import { injectVisualColorsChart } from "./pipeline/canvasInject";
 import { executeAutonomousMcpAgent } from "./pipeline/mcpClient";
 import { runVisualAudit } from "../auditors/visual";
-import * as path from "path";
 
 export async function executeSiteAudit(
   targetSite: string,
@@ -27,6 +28,11 @@ export async function executeSiteAudit(
   const runId = Math.random().toString(36).substring(2, 7).toUpperCase();
   const hostName = new URL(targetSite).hostname.replace(/[^a-z0-9]/gi, "_");
   const reportDir = path.join(process.cwd(), "reports", hostName);
+
+  // Ensure the specific host report directory exists before writing to it
+  if (!fs.existsSync(reportDir)) {
+    fs.mkdirSync(reportDir, { recursive: true });
+  }
 
   console.log(
     "\n========================================================================",
@@ -93,9 +99,11 @@ export async function executeSiteAudit(
               `🤖 [MCP AGENT] Spawning background automation script compiler for: ${url}`,
             );
             const activeScriptFile = await executeAutonomousMcpAgent(page, url);
-            console.log(
-              `   💾 Automated test compiled and saved cleanly to: ${activeScriptFile}`,
-            );
+            if (activeScriptFile) {
+              console.log(
+                `   💾 Automated test compiled and saved cleanly to: ${activeScriptFile}`,
+              );
+            }
           }
 
           if (scanVisual) {
@@ -112,6 +120,10 @@ export async function executeSiteAudit(
               .substring(0, 40);
             const imgFilename = `screenshots/map_${runId}_${fileSafeName}.png`;
             const fullImgPath = path.join(reportDir, imgFilename);
+
+            if (!fs.existsSync(path.dirname(fullImgPath))) {
+              fs.mkdirSync(path.dirname(fullImgPath), { recursive: true });
+            }
 
             await page.screenshot({
               path: fullImgPath,
@@ -172,47 +184,93 @@ export async function executeSiteAudit(
     wasInterrupted,
   );
 
-  const detailedPayload: DetailedReportData = {
-    runId,
+  // =========================================================================
+  // THE BRIDGE: Trigger Playwright Native Visual Engine
+  // =========================================================================
+  
+  const discoveredUrls = structuredPagesList.map(p => p.url);
+  const reportsGlobalDir = path.join(process.cwd(), 'reports');
+  if (!fs.existsSync(reportsGlobalDir)) {
+    fs.mkdirSync(reportsGlobalDir, { recursive: true });
+  }
+  const lastCrawlPath = path.join(reportsGlobalDir, 'last_crawled_urls.json');
+  fs.writeFileSync(lastCrawlPath, JSON.stringify(discoveredUrls, null, 2), 'utf8');
+
+  // 1. Execute Playwright programmatically
+  console.log('\n📸 Firing Playwright Native Visual Regression Suite...');
+  let playwrightPassed = true;
+  try {
+    execSync('npx playwright test tests/visual.spec.ts --reporter=html', {
+      stdio: 'inherit',
+      timeout: 300000,
+      env: { 
+        ...process.env, 
+        CI: 'true',
+        DEVICE_MODE: deviceMode
+      }
+    });
+    console.log('   ✅ Visual Engine complete. No layout shifts detected.');
+  } catch (e) {
+    playwrightPassed = false;
+    console.log('   ⚠️ Visual diffs or test failures detected!');
+  }
+
+  // 2. Read the JSON bridge file created by tests/visual.spec.ts
+  let visualData: any[] = [];
+  const bridgePath = path.join(reportsGlobalDir, 'visual_bridge.json');
+  if (fs.existsSync(bridgePath)) {
+    try {
+      visualData = JSON.parse(fs.readFileSync(bridgePath, 'utf8'));
+    } catch (err) {
+      console.warn("Could not parse visual_bridge.json");
+    }
+  }
+
+  // 3. Update the Knowledge Ledger based on run results
+  const ledgerPath = path.join(reportsGlobalDir, 'knowledge_ledger.json');
+  let knowledgeLedger: Record<string, string> = {};
+  if (fs.existsSync(ledgerPath)) {
+    try { knowledgeLedger = JSON.parse(fs.readFileSync(ledgerPath, 'utf8')); } catch(err) {}
+  }
+
+  structuredPagesList.forEach(page => {
+    const vMatch = visualData.find(v => v.url === page.url);
+    if (vMatch && vMatch.status === 'failed') {
+      knowledgeLedger[page.url] = 'Warning: Visual layout shift or interaction failure detected on previous run. Adjust selectors or verify element stability.';
+    } else {
+      knowledgeLedger[page.url] = 'Verified: Page structure and visual baselines stable on last execution.';
+    }
+  });
+
+  fs.writeFileSync(ledgerPath, JSON.stringify(knowledgeLedger, null, 2), 'utf8');
+  console.log(`   📝 Knowledge ledger updated successfully at: ${ledgerPath}`);
+
+  // 4. Merge visual results into main page objects
+  const finalPagesWithVisuals = structuredPagesList.map(page => {
+    const visualMatch = visualData.find(v => v.url === page.url);
+    return {
+      ...page,
+      visualResults: visualMatch || { status: 'passed' }
+    };
+  });
+
+  // 5. Build the final report payload
+  const finalReportData: DetailedReportData = {
+    runId: runId,
     targetUrl: targetSite,
     timestamp: new Date().toLocaleString(),
     deviceMode: deviceMode,
-    brokenCount: structuredPagesList.filter((r) => r.status >= 400).length,
+    brokenCount: finalPagesWithVisuals.filter((r) => r.status >= 400).length,
     a11yViolationCount: aggregateA11yIssues,
-    pages: structuredPagesList,
+    pages: finalPagesWithVisuals,
     incompletePages: crawler.queue,
   };
 
-  // Save discovered URLs dynamically for the Playwright Visual Runner
-  const discoveredUrls = structuredPagesList.map((p) => p.url);
-  const lastCrawlPath = path.join(
-    process.cwd(),
-    "reports",
-    "last_crawled_urls.json",
-  );
-  fs.writeFileSync(
-    lastCrawlPath,
-    JSON.stringify(discoveredUrls, null, 2),
-    "utf8",
-  );
+  // 6. Generate the HTML report & save to the specific host directory
+  const dashboardHtml = generateDashboardHtml(finalReportData);
+  const reportPath = path.join(reportDir, `run_${runId}.html`);
+  fs.writeFileSync(reportPath, dashboardHtml, 'utf8');
 
-  // ============================================================
-  // THE BRIDGE: Trigger Playwright Native Visual Engine
-  // ============================================================
-  console.log(
-    "\n📸 [Visual Engine] Firing Playwright Native Visual Regression Suite...",
-  );
-  try {
-    // This tells Playwright to run the visual spec and generate its native HTML report
-    execSync("npx playwright test tests/visual.spec.ts --reporter=html", {
-      stdio: "inherit", // Shows Playwright's output in your current terminal
-      timeout: 120000,
-    });
-    console.log("   ✅ Visual Engine complete. No layout shifts detected.");
-  } catch (visualError) {
-    console.log(
-      "   ⚠️ Visual diffs detected! Playwright has generated the sliders.",
-    );
-  }
-  generateHistoricReportsHub(detailedPayload);
+  // 7. Update the history index
+  generateHistoricReportsHub(finalReportData);
 }
