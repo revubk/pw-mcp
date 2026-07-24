@@ -180,22 +180,22 @@ export function generateDashboardHtml(data: DetailedReportData): string {
         .header p { margin: 0; color: var(--text-muted); font-size: 14px; font-weight: 500; }
         
         .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 40px; }
-        .metric-card { background: #f3f4f6; padding: 18px 18px 16px; border-radius: 16px; border: 1px solid rgba(148, 163, 184, 0.14); text-align: center; box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08); min-height: 120px; }
+        .metric-card { background: rgba(134, 185, 163, 0.18); padding: 18px 18px 16px; border-radius: 18px; border: 1px solid rgba(134, 185, 163, 0.24); text-align: center; box-shadow: 0 10px 20px rgba(101, 146, 135, 0.08); min-height: 120px; display: flex; flex-direction: column; justify-content: center; }
         .metric-value { font-size: 2rem; font-weight: 800; margin: 6px 0; color: var(--text); }
-        .metric-label { font-size: 10px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.6px; margin-bottom: 8px; }
+        .metric-label { font-size: 9px; color: #4f6b5e; text-transform: uppercase; font-weight: 700; letter-spacing: 0.65px; margin-bottom: 8px; }
 
         .charts-container { display: grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 24px; margin-bottom: 40px; }
-        .chart-box { background: #ffffff; border: 1px solid rgba(101, 146, 135, 0.18); border-radius: 18px; padding: 22px 20px 18px; box-shadow: 0 16px 35px rgba(15, 23, 42, 0.06); display: flex; flex-direction: column; align-items: stretch; min-height: 330px; }
+        .chart-box { background: rgba(255,255,255,0.95); border: 1px solid rgba(101, 146, 135, 0.18); border-radius: 20px; padding: 22px 20px 18px; box-shadow: 0 12px 28px rgba(101, 146, 135, 0.07); display: flex; flex-direction: column; align-items: stretch; min-height: 330px; }
         .chart-box h3 { font-size: 13px; color: #2f4858; text-transform: uppercase; margin-top: 0; margin-bottom: 18px; letter-spacing: 0.6px; width: 100%; text-align: left; border-bottom: 1px solid rgba(101, 146, 135, 0.18); padding-bottom: 12px; }
         .canvas-wrapper { position: relative; height: 240px; width: 100%; display: flex; justify-content: center; }
         .canvas-wrapper { position: relative; height: 220px; width: 100%; display: flex; justify-content: center; }
 
         details > summary { list-style: none; cursor: pointer; }
         details > summary::-webkit-details-marker { display: none; }
-        .page-accordion { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px; overflow: hidden; transition: border-color 0.2s; }
-        .page-accordion:hover { border-color: #cbd5e1; }
-        .page-accordion[open] { border-color: var(--accent); }
-        .page-summary { padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid transparent; }
+        .page-accordion { background: rgba(101, 146, 135, 0.08); border: 1px solid rgba(101, 146, 135, 0.14); border-radius: 16px; margin-bottom: 16px; overflow: hidden; transition: border-color 0.2s, background 0.2s; }
+        .page-accordion:hover { border-color: rgba(101, 146, 135, 0.24); background: rgba(101, 146, 135, 0.10); }
+        .page-accordion[open] { border-color: rgba(101, 146, 135, 0.32); }
+        .page-summary { padding: 16px 20px; background: rgba(255,255,255,0.92); border-bottom: 1px solid transparent; }
         .page-accordion[open] .page-summary { border-bottom-color: var(--border); }
         .summary-content { display: flex; align-items: center; gap: 12px; width: 100%; }
         .url-text { font-size: 14px; word-break: break-all; flex-grow: 1; font-weight: 600; color: #334155; }
